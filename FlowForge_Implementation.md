@@ -1,198 +1,274 @@
-# 🛠️ FlowForge — Technical Architecture & Logic Specification
+# 🏛️ FlowForge — Technical Specification & Architecture Blueprint
 
-> **Project Title**: FlowForge — Workflow Automation & Smart File Organization Engine  
-> **Target Environment**: Turbo C++ (16-bit Borland C++)  
-> **Document Purpose**: System Architecture, Algorithm Specifications, & OOP Design Guide  
-
----
-
-## 📌 Executive Summary
-
-**FlowForge** is designed as a modular, event-driven engine that automates multi-step file management tasks while maintaining high system resilience.
-
-Instead of performing manual, isolated file manipulations, FlowForge encapsulates individual operations into discrete **Task** units, chains them into a sequential **Workflow**, evaluates files against user-defined **SmartSort Rules**, and routes runtime exceptions to a **Resilience Engine** for automatic self-recovery.
+<p align="center">
+  <b>FlowForge: Workflow Automation, Smart File Organization & Resilience Engine</b><br>
+  <i>Object-Oriented Programming Course Project Specification</i>
+</p>
 
 ---
 
-## 🏗️ System Architecture & Data Flow
+## 📑 Document Metadata
 
+| Attribute | Specification |
+| :--- | :--- |
+| **Document Version** | `v1.0.0-release` |
+| **Target Compiler** | Turbo C++ 3.0 / 3.1 (Borland 16-bit C++) |
+| **Language Standard** | C++98 / Classic C++ with Borland Extensions |
+| **Architecture Pattern** | Command Pattern + Strategy Pattern + Chain of Recovery |
+| **Primary Domain** | System Utilities & Automated File Management |
+
+---
+
+## 1. System Overview & Problem Statement
+
+### 1.1 Problem Statement
+Daily computer operations involve repetitive, multi-step file manipulation tasks:
+- Sorting cluttered `Downloads` directories.
+- Renaming assignments to standardized naming conventions.
+- Creating subject-specific directories and organizing files by type/size/age.
+- Generating file backups and verifying backup integrity.
+
+Standard file managers perform isolated operations (copy, move, rename) independently. They lack the capability to compose these operations into reusable, automated workflows equipped with **fault tolerance and self-recovery**.
+
+### 1.2 Proposed Solution
+**FlowForge** unifies three core capabilities into a single automated engine:
+
+1. **Workflow Automation**: Group sequential file operations into a single reusable object pipeline.
+2. **SmartSort Engine**: Rule-driven file categorization based on file extensions, size thresholds, or creation age.
+3. **Resilience Engine**: Automated error detection, auto-fix path creation, retry handling, and fallback execution.
+
+> [!NOTE]
+> **Core Mathematical Model**:  
+> $$\text{FlowForge} = \text{Workflow Engine} \cup \text{SmartSort Classifier} \cup \text{Resilience Engine}$$
+
+---
+
+## 2. Architectural Design & Component Overview
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                              FLOWFORG.CPP                              │
+│                 (User Interface & Menu Dispatcher)                     │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                    ┌───────────────▼───────────────┐
+                    │        WorkflowManager        │
+                    │   Pipeline Orchestrator       │
+                    └───────────────┬───────────────┘
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          │                         │                         │
+┌─────────▼─────────┐     ┌─────────▼─────────┐     ┌─────────▼─────────┐
+│    Task Engine    │     │  SmartSort Engine │     │ Resilience Engine │
+│  Abstract `Task`  │     │  Abstract `Rule`  │     │ Exception & Auto  │
+│  Class Hierarchy  │     │  Class Hierarchy  │     │ Recovery Handler  │
+└───────────────────┘     └───────────────────┘     └───────────────────┘
+          │                         │                         │
+          └─────────────────────────┼─────────────────────────┘
+                                    │
+                    ┌───────────────▼───────────────┐
+                    │            Logger             │
+                    │    Persistent Audit Stream    │
+                    └───────────────────────────────┘
 ```
-                      ┌─────────────────────────┐
-                      │    User Interface UI    │
-                      │   Interactive Menu Shell│
-                      └────────────┬────────────┘
-                                   │
-                    ┌──────────────▼──────────────┐
-                    │       WorkflowManager       │
-                    │   Pipeline Orchestrator     │
-                    └──────────────┬──────────────┘
-                                   │
-          ┌────────────────────────┼────────────────────────┐
-          │                        │                        │
-┌─────────▼─────────┐    ┌─────────▼─────────┐    ┌─────────▼─────────┐
-│    Task Engine    │    │  SmartSort Engine │    │ Resilience Engine │
-│ Polymorphic Task  │    │ Dynamic Rule      │    │ Error Detection & │
-│ Pipeline          │    │ Evaluation        │    │ Recovery Pipeline │
-└───────────────────┘    └───────────────────┘    └───────────────────┘
-          │                        │                        │
-          └────────────────────────┼────────────────────────┘
-                                   │
-                    ┌──────────────▼──────────────┐
-                    │       Logger Subsystem      │
-                    │   Persistent Audit Trail    │
-                    └─────────────────────────────┘
-```
 
----
+### 2.1 Component Responsibility Matrix
 
-## 🧬 OOP Architectural Principles
-
-| OOP Concept | Conceptual Role | System Mechanism |
+| Component | Responsibility | Key Classes |
 | :--- | :--- | :--- |
-| **Abstraction** | Contract Definition | Base classes `Task` and `Rule` define pure virtual interface signatures (`execute()`, `describe()`, `matches()`), exposing *what* operations do while hiding *how* they are implemented. |
-| **Inheritance** | Behavioral Specialization | Concrete task classes (`RenameTask`, `MoveTask`, `BackupTask`, `VerifyTask`, `CreateFolderTask`, `SmartSortTask`) derive from `Task`. Concrete rules (`FileTypeRule`, `SizeRule`, `AgeRule`) derive from `Rule`. |
-| **Polymorphism** | Dynamic Execution | `WorkflowManager` holds an array of abstract base pointers (`Task* taskList[20]`). Calling `taskList[i]->execute()` dynamically resolves to the appropriate derived task logic at runtime. |
-| **Encapsulation** | State Protection | Internal file states (`FileInfo`), retry counters, and log paths are kept `protected` or `private`, accessible only via public getters and operational methods. |
-| **File Handling** | Persistent Audit | The `Logger` subsystem uses C file streams in append (`"a"`), read (`"r"`), and write (`"w"`) modes to maintain `FLOW.LOG`. |
+| **Orchestrator** | Manages workflow execution loop & task queues | `WorkflowManager` |
+| **Task Engine** | Encapsulates single file operations | `Task`, `RenameTask`, `MoveTask`, `BackupTask`, `VerifyTask`, `CreateFolderTask` |
+| **SmartSort Engine** | Evaluates files against categorization rules | `Rule`, `FileTypeRule`, `SizeRule`, `AgeRule`, `SmartSortEngine` |
+| **Resilience Engine**| Detects failures & executes recovery strategies | `ResilienceEngine` |
+| **Logger** | Writes persistent execution logs to `FLOW.LOG` | `Logger` |
 
 ---
 
-## 🧠 Core System Logic & Algorithms
+## 3. Data Model & Class Specifications
 
-### 1. Workflow Execution Algorithm
-The `WorkflowManager` orchestrates task execution sequentially, interacting with the `Logger` and `ResilienceEngine` on failure:
+### 3.1 Core Data Structures (`fileinfo.h`)
 
-```text
-ALGORITHM: ExecuteWorkflow(Workflow)
------------------------------------
-1. FOR EACH task IN Workflow.taskList (from index 0 to taskCount - 1):
-     a. Log starting state: Logger.log("Executing: " + task.name)
-     b. Print task description to screen
-     c. Set status = task.execute()
-     
-     d. IF status == SUCCESS THEN:
-          - Log success: Logger.log("SUCCESS: " + task.name)
-          - Continue to next task
-          
-     e. ELSE IF status == FAILURE THEN:
-          - Log failure: Logger.log("FAILURE: " + task.name)
-          - Call recovery: recovered = ResilienceEngine.handle(task)
-          
-          - IF recovered == TRUE THEN:
-               - Log recovery: Logger.log("RECOVERED: " + task.name)
-               - Continue to next task
-          - ELSE:
-               - Log abort: Logger.log("ABORTED: " + task.name)
-               - TERMINATE workflow execution
-               
-     f. ELSE IF status == SKIPPED THEN:
-          - Log skip: Logger.log("SKIPPED: " + task.name)
-          - Continue to next task
+```cpp
+struct FileInfo {
+    char name[64];         // File name (e.g. "assignment.pdf")
+    char extension[10];    // Extracted file extension (e.g. "pdf")
+    char sourcePath[128];  // Source directory path
+    char destPath[128];    // Destination directory path
+    long sizeBytes;        // File size in bytes
+    int  ageDays;          // Creation age in days
+    int  isVirtual;        // 1 = Simulated sandbox file, 0 = Physical DOS file
+};
 
-2. Log completion: Logger.log("WORKFLOW COMPLETE")
+enum TaskResult { SUCCESS, FAILURE, SKIPPED };
+enum ErrorType  { ERR_FOLDER_NOT_FOUND, ERR_FILE_NOT_FOUND, ERR_UNKNOWN };
 ```
 
 ---
 
-### 2. Resilience Engine Recovery Strategy Logic
-The `ResilienceEngine` evaluates failed operations and selects the appropriate recovery strategy based on error classification:
+### 3.2 Task Class Hierarchy (Command Pattern)
+
+The `Task` class forms the abstract interface for all executable pipeline steps.
+
+```cpp
+class Task {
+protected:
+    char taskName[64];
+    FileInfo file;
+    int maxRetries;
+    int retryCount;
+
+public:
+    Task(const char* name, FileInfo f, int retries = 2);
+    
+    // Pure Virtual Functions (Abstraction Contract)
+    virtual TaskResult execute() = 0;
+    virtual void describe() = 0;
+
+    const char* getTaskName();
+    FileInfo    getFile();
+    virtual ~Task();
+};
+```
+
+#### Concrete Task Implementations:
+- **`RenameTask`**: Modifies `file.name` using `<stdio.h>` `rename()` or virtual simulation.
+- **`CreateFolderTask`**: Creates target directories using `<dir.h>` `mkdir()`.
+- **`MoveTask`**: Relocates files across paths by calling `rename(srcFull, destFull)`.
+- **`BackupTask`**: Creates a binary duplicate with a `_BAK` suffix using stream buffer operations.
+- **`VerifyTask`**: Verifies backup existence (`access()`) and checks non-zero file byte length.
+- **`SmartSortTask`**: Queries `SmartSortEngine` to compute destination paths, then delegates to `MoveTask`.
+
+---
+
+### 3.3 Rule Class Hierarchy (Strategy Pattern)
+
+The `Rule` class provides an abstract filter interface for file classification.
+
+```cpp
+class Rule {
+protected:
+    char destinationFolder[128];
+
+public:
+    Rule(const char* destFolder);
+
+    // Pure Virtual Interface
+    virtual int matches(FileInfo file) = 0;
+    virtual void describe() = 0;
+
+    const char* getDestination();
+    virtual ~Rule();
+};
+```
+
+#### Concrete Rule Implementations:
+- **`FileTypeRule`**: Performs extension string comparison (`strcmp(file.extension, targetExt)`).
+- **`SizeRule`**: Evaluates condition `file.sizeBytes >= minSizeBytes`.
+- **`AgeRule`**: Evaluates condition `file.ageDays >= minAgeDays`.
+
+---
+
+### 3.4 Resilience Engine Specification
+
+The `ResilienceEngine` handles runtime errors using a structured decision matrix:
 
 ```text
-ALGORITHM: ResilienceHandle(Task)
----------------------------------
-1. Inspect Task and system state to determine ErrorType:
-   - If destination directory is missing  -> ERR_FOLDER_NOT_FOUND
-   - If source file does not exist       -> ERR_FILE_NOT_FOUND
-   - Otherwise                           -> ERR_UNKNOWN
+                     ┌───────────────────────────┐
+                     │   Task Returns FAILURE    │
+                     └─────────────┬─────────────┘
+                                   │
+                     ┌─────────────▼─────────────┐
+                     │    detectError(task)      │
+                     └─────────────┬─────────────┘
+                                   │
+         ┌─────────────────────────┼─────────────────────────┐
+         │                         │                         │
+┌────────▼─────────┐      ┌────────▼─────────┐      ┌────────▼─────────┐
+│ERR_FOLDER_NOT_FND│      │ERR_FILE_NOT_FOUND│      │   ERR_UNKNOWN    │
+└────────┬─────────┘      └────────┬─────────┘      └────────┬─────────┘
+         │                         │                         │
+┌────────▼─────────┐      ┌────────▼─────────┐      ┌────────▼─────────┐
+│ Auto-Fix Strategy│      │ Fallback Strategy│      │  Retry Strategy  │
+│ (mkdir destPath) │      │ (Alt Source Path)│      │  (Up to Max)     │
+└────────┬─────────┘      └────────┬─────────┘      └────────┬─────────┘
+         │                         │                         │
+         └─────────────────────────┼─────────────────────────┘
+                                   │
+                     ┌─────────────▼─────────────┐
+                     │   Task Retry Successful?  │
+                     └───┬───────────────────┬───┘
+                         │                   │
+                      YES│                 NO│
+                         ▼                   ▼
+                 ┌───────────────┐   ┌───────────────┐
+                 │ Return RECOVER│   │ Return ABORT  │
+                 └───────────────┘   └───────────────┘
+```
 
-2. SWITCH ErrorType:
-     CASE ERR_FOLDER_NOT_FOUND:
-          a. Execute Auto-Fix: Automatically create missing destination folder (mkdir)
-          b. Execute Retry: Re-run Task.execute()
-          c. IF Retry succeeded -> RETURN TRUE (Recovered)
-          d. ELSE               -> RETURN FALSE (Abort)
+> [!TIP]
+> **Resilience Guarantee**: If a target folder is missing, `autoFix()` automatically creates the folder structure using `mkdir()` and re-executes the failed task without aborting the workflow.
 
-     CASE ERR_FILE_NOT_FOUND:
-          a. Execute Fallback: Attempt alternative file source path or search directory
-          b. IF Fallback succeeded -> RETURN TRUE (Recovered)
-          c. ELSE                  -> RETURN FALSE (Abort)
+---
 
-     DEFAULT:
-          a. WHILE task.retryCount < task.maxRetries:
-               - Increment task.retryCount
-               - IF Task.execute() succeeds -> RETURN TRUE
-          b. RETURN FALSE (Abort)
+## 4. Execution Sequence Trace
+
+Below is the step-by-step trace of an execution pipeline ("Organize and Backup Downloads"):
+
+```text
+Step 1: SmartSortTask
+  ├── Query SmartSortEngine with file "assignment.pdf"
+  ├── FileTypeRule matches extension "pdf" -> target "C:\DOCS\"
+  └── Perform relocation via MoveTask -> SUCCESS ✓
+
+Step 2: CreateFolderTask
+  ├── Target directory: "C:\DOCS\BACKUP\"
+  └── Directory already exists -> SKIPPED →
+
+Step 3: MoveTask
+  ├── Relocate file to "C:\DOCS\BACKUP\"
+  ├── Directory check fails -> FAILURE ✗
+  ├── ResilienceEngine triggered:
+  │     ├── Detect Error: ERR_FOLDER_NOT_FOUND
+  │     ├── Auto-Fix: mkdir("C:\DOCS\BACKUP\")
+  │     └── Retry MoveTask -> SUCCESS ✓ (RECOVERED)
+
+Step 4: BackupTask
+  ├── Binary byte copy to "assignment_BAK.pdf" -> SUCCESS ✓
+
+Step 5: VerifyTask
+  ├── Verify file integrity (size > 0 bytes) -> SUCCESS ✓
+
+============================================================
+           WORKFLOW COMPLETED SUCCESSFULLY
+============================================================
 ```
 
 ---
 
-### 3. SmartSort Rule Matching Algorithm
-The `SmartSortEngine` evaluates files against a collection of user-defined rules to determine target directory routing:
+## 5. OOP Principles Academic Mapping
 
-```text
-ALGORITHM: GetSmartSortDestination(FileInfo file)
--------------------------------------------------
-1. FOR EACH rule IN SmartSortEngine.rules:
-     a. Evaluate: matchStatus = rule.matches(file)
-     b. IF matchStatus == TRUE THEN:
-          - RETURN rule.getDestination() (First matching rule wins)
-
-2. IF no rule matches:
-     - RETURN default destination directory ("Unsorted")
-```
-
-#### Specific Rule Evaluation Logic:
-- **`FileTypeRule`**: Extracts `file.extension` and performs a case-insensitive string comparison against target extension (e.g., `"pdf"`, `"jpg"`).
-- **`SizeRule`**: Compares `file.sizeBytes` against threshold `minSizeBytes`. Returns `TRUE` if file size meets or exceeds threshold.
-- **`AgeRule`**: Compares `file.ageDays` against threshold `minAgeDays`. Returns `TRUE` if file age meets or exceeds threshold.
+| Syllabus Topic | Project Implementation Reference |
+| :--- | :--- |
+| **Classes & Objects** | Instantiation of `FileInfo`, `WorkflowManager`, `Task`, `Rule`, and `Logger` objects. |
+| **Data Encapsulation** | Private attributes (`workflowName`, `taskList`, `logFilePath`) protected from direct manipulation. |
+| **Data Abstraction** | Abstract base classes `Task` and `Rule` hiding underlying file operations. |
+| **Inheritance** | Derived task hierarchies (`public Task`) and rule hierarchies (`public Rule`). |
+| **Polymorphism** | Heterogeneous pointer arrays (`Task* taskList[20]`) invoking `execute()` dynamically. |
+| **Dynamic Memory** | Dynamic allocation (`new`) and cleanup (`delete`) in `WorkflowManager` destructors. |
+| **File I/O Streams** | Standard C file stream operations (`fopen`, `fprintf`, `fgets`, `fclose`) in `Logger`. |
+| **Constructor Overloading** | Default arguments in constructors (`Task(name, file, retries = 2)`). |
 
 ---
 
-### 4. File Copy & Backup Algorithm
-For `BackupTask`, binary-safe file copying is performed using chunked stream buffers:
+## 6. Turbo C++ Environment Constraints & Solutions
 
-```text
-ALGORITHM: PerformFileBackup(SourcePath, DestinationPath)
---------------------------------------------------------
-1. IF file.isVirtual == 1 THEN:
-     - Simulate creation of "_BAK" file
-     - RETURN SUCCESS
+> [!WARNING]
+> Turbo C++ runs in a 16-bit DOS environment with specific memory and library limitations.
 
-2. Open SourcePath in Binary Read mode ("rb")
-3. Open DestinationPath in Binary Write mode ("wb")
-
-4. IF either file stream fails to open THEN:
-     - RETURN FAILURE (Triggers Resilience Engine)
-
-5. WHILE buffer = Read Chunk from SourceStream:
-     - Write buffer Chunk to DestinationStream
-
-6. Close SourceStream and DestinationStream
-7. RETURN SUCCESS
-```
+1. **8.3 Filename Convention**: Physical DOS mode truncates long file names to 8 characters + 3 extension characters. FlowForge includes a **Virtual Sandbox Mode** (`file.isVirtual = 1`) to allow full testing of long filenames during demonstrations.
+2. **Standard Library Constraints**: Uses classic `<iostream.h>`, `<fstream.h>`, `<dir.h>`, `<stdio.h>`, and `<conio.h>` headers instead of modern C++ standard library templates.
+3. **Memory Model**: Uses explicit pointer arrays instead of `std::vector` to prevent segment overflow within the 64 KB 16-bit memory limit.
 
 ---
 
-## 📊 Shared Data Model Specifications
-
-### `FileInfo` Attributes
-- `name`: Base filename string (e.g., `"assignment.pdf"`).
-- `extension`: Extracted file format (e.g., `"pdf"`).
-- `sourcePath`: Directory origin (e.g., `"C:\\DOWNLOADS\\"`).
-- `destPath`: Directory destination (e.g., `"C:\\DOCUMENTS\\"`).
-- `sizeBytes`: File size in bytes.
-- `ageDays`: Creation age in days.
-- `isVirtual`: Flag toggle (`1` = virtual simulated file for testing, `0` = physical DOS file).
-
-### Task Execution Outcomes
-- `SUCCESS`: Task completed without errors.
-- `FAILURE`: Operation failed; routes execution to Resilience Engine.
-- `SKIPPED`: Operation bypassed safely (e.g., destination directory already exists).
-
----
-
-## 🛠️ Turbo C++ Implementation Guidelines
-
-1. **Memory Allocation**: Use explicit dynamic allocation (`new`) when adding tasks to `WorkflowManager` and rules to `SmartSortEngine`. Ensure destructors clean up heap memory using `delete`.
-2. **String Operations**: Rely on `<string.h>` utilities (`strcpy`, `strcmp`, `strcat`) for string manipulation rather than modern C++ `std::string`.
-3. **Console Interface**: Utilize `<conio.h>` functions (`clrscr()`, `getch()`, `gotoxy()`) for screen management and input handling in the main menu loop.
+*FlowForge Specification Guide — Built for Object-Oriented Programming Course Evaluation.*
