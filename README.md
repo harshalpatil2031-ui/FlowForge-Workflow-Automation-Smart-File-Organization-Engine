@@ -1,77 +1,86 @@
-# 🚀 FLOWFORGE — Workflow Automation & Smart File Organization Engine
+# 🚀 FlowForge — Workflow Automation & Smart File Organization Engine
 
-> **Course Project**: Object-Oriented Programming (OOP)  
-> **Environment**: Turbo C++ (16-bit Borland C++)  
-> **Paradigm**: Object-Oriented Architecture  
-
----
-
-## 📌 Problem Statement
-
-Every day, we perform repetitive file operations manually: renaming files, sorting Downloads folders, moving documents into subject folders, creating backups, and verifying backups.
-
-Current file managers perform single operations (copy, move, rename), but do not allow combining multiple tasks into an automated workflow with **intelligent failure recovery**.
+<p align="center">
+  <img src="https://img.shields.io/badge/Language-C%2B%2B-blue.svg?style=for-the-badge&logo=cplusplus" alt="Language C++">
+  <img src="https://img.shields.io/badge/Compiler-Turbo%20C%2B%2B%203.0-orange.svg?style=for-the-badge" alt="Turbo C++">
+  <img src="https://img.shields.io/badge/Paradigm-Object--Oriented-green.svg?style=for-the-badge" alt="OOP">
+  <img src="https://img.shields.io/badge/Course-OOP%20Project-purple.svg?style=for-the-badge" alt="OOP Course Project">
+</p>
 
 ---
 
-## 💡 Solution: FlowForge
+## 📌 Executive Summary
 
-**FlowForge** combines three powerful features into one unified engine:
+**FlowForge** is an intelligent, self-recovering workflow automation and file organization engine developed in Turbo C++. 
 
-1. **Workflow Automation**: Define a sequence of file tasks once and execute the entire pipeline with one click.
-2. **SmartSort**: Automatically classify and organize files into folders based on custom rules (file type, size, age).
-3. **Resilience Engine**: Detects runtime failures (e.g., missing destination folder) and automatically executes recovery strategies (Auto-Fix missing folder, Retry, Fallback, Abort).
+It addresses the friction of performing manual, repetitive file operations—such as sorting downloaded assignments, renaming documents, moving files across subject directories, creating backups, and verifying file integrity—by allowing users to construct reusable, automated **Workflows** backed by a **Self-Recovering Resilience Engine**.
 
-$$\text{FlowForge} = \text{Workflow Automation} + \text{SmartSort} + \text{Failure Recovery}$$
+> [!IMPORTANT]
+> **Key Innovation**: Unlike traditional file managers that fail silently or abort on errors, FlowForge monitors every operation and automatically executes recovery strategies (e.g., auto-creating missing destination folders, retrying operations, or applying fallback paths).
+
+---
+
+## 💡 Core Concept
+
+$$\text{FlowForge} = \text{Workflow Automation} + \text{SmartSort} + \text{Resilience Engine}$$
+
+- **Workflow Automation**: Group multiple file tasks into a single executable, reusable pipeline.
+- **SmartSort Engine**: Rule-based automatic file classification by extension, size, or creation age.
+- **Resilience Engine**: Intelligent error detection and automated self-recovery.
 
 ---
 
 ## 🏗️ System Architecture
 
 ```
-                      ┌─────────────────────────┐
-                      │      FLOWFORG.CPP       │
-                      │  (Interactive Menu UI)  │
-                      └────────────┬────────────┘
-                                   │
-                    ┌──────────────▼──────────────┐
-                    │       WorkflowManager       │
-                    │   Manages & Executes Tasks  │
-                    └──────────────┬──────────────┘
-                                   │
-          ┌────────────────────────┼────────────────────────┐
-          │                        │                        │
-┌─────────▼─────────┐    ┌─────────▼─────────┐    ┌─────────▼─────────┐
-│     Task Engine   │    │  SmartSort Engine │    │ Resilience Engine │
-│ Abstract `Task`   │    │ Abstract `Rule`   │    │ Error detection & │
-│ Base Class        │    │ Base Class        │    │ Auto-Fix Recovery │
-└───────────────────┘    └───────────────────┘    └───────────────────┘
-          │                        │                        │
-          └────────────────────────┼────────────────────────┘
-                                   │
-                    ┌──────────────▼──────────────┐
-                    │           Logger            │
-                    │   Writes to `FLOW.LOG`      │
-                    └─────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                              FLOWFORG.CPP                              │
+│                      (Console UI & Main Menu)                          │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                    ┌───────────────▼───────────────┐
+                    │        WorkflowManager        │
+                    │   Manages & Executes Tasks    │
+                    └───────────────┬───────────────┘
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          │                         │                         │
+┌─────────▼─────────┐     ┌─────────▼─────────┐     ┌─────────▼─────────┐
+│    Task Engine    │     │  SmartSort Engine │     │ Resilience Engine │
+│ Abstract `Task`   │     │ Abstract `Rule`   │     │ Error Detection & │
+│ Base Class        │     │ Base Class        │     │ Auto-Fix Recovery │
+└───────────────────┘     └───────────────────┘     └───────────────────┘
+          │                         │                         │
+          └─────────────────────────┼─────────────────────────┘
+                                    │
+                    ┌───────────────▼───────────────┐
+                    │            Logger             │
+                    │   Writes to `FLOW.LOG`        │
+                    └───────────────────────────────┘
 ```
 
 ---
 
-## 🛠️ OOP Concepts Implemented
+## 🧬 OOP Concepts Mapping
 
-- **Abstraction**: Pure virtual functions `Task::execute() = 0`, `Task::describe() = 0`, and `Rule::matches() = 0`.
-- **Inheritance**: Derived tasks (`RenameTask`, `MoveTask`, `BackupTask`, `VerifyTask`, `CreateFolderTask`, `SmartSortTask`) and derived rules (`FileTypeRule`, `SizeRule`, `AgeRule`).
-- **Polymorphism**: `Task* taskList[20]` array in `WorkflowManager` executing polymorphic tasks dynamically.
-- **Encapsulation**: Private and protected data members accessed via public getter/setter methods.
-- **File Handling**: Logging history to `FLOW.LOG` and reading/writing log entries using C file streams.
+| OOP Concept | Implementation Details |
+| :--- | :--- |
+| **Abstraction** | Pure virtual methods `Task::execute() = 0`, `Task::describe() = 0`, and `Rule::matches() = 0` hide implementation details behind clean interfaces. |
+| **Inheritance** | Derived task hierarchy (`RenameTask`, `MoveTask`, `CreateFolderTask`, `BackupTask`, `VerifyTask`, `SmartSortTask`) and rule hierarchy (`FileTypeRule`, `SizeRule`, `AgeRule`). |
+| **Polymorphism** | `Task* taskList[20]` heterogeneous pointer array in `WorkflowManager` executing polymorphic tasks dynamically at runtime. |
+| **Encapsulation** | Protected data attributes (`taskName`, `file`, `destinationFolder`) accessed strictly via public accessor functions. |
+| **File Handling** | Audit trail written to `FLOW.LOG` using C file streams (`fopen`, `fprintf`, `fgets`, `fclose`). |
 
 ---
 
-## 📂 Project Files
+## 📂 Project Structure
 
-- `FLOWFORG.CPP`: Core C++ source code containing all class definitions, engine structures, and interactive menu.
-- `FlowForge_Implementation.md`: Complete architectural reference and implementation blueprint.
-- `README.md`: Project documentation and open task checklist.
+```text
+FlowForge/
+├── FLOWFORG.CPP                # Core C++ source file containing all classes & main loop
+├── FlowForge_Implementation.md  # Detailed technical design blueprint & class specifications
+└── README.md                   # Project documentation & task roadmap
+```
 
 ---
 
@@ -82,37 +91,37 @@ $$\text{FlowForge} = \text{Workflow Automation} + \text{SmartSort} + \text{Failu
 - [x] Abstract `Task` base class
 - [x] Abstract `Rule` base class
 - [x] `Logger` class (writes history to `FLOW.LOG`)
-- [x] `WorkflowManager` class skeleton & polymorphic task execution loop
+- [x] `WorkflowManager` class skeleton & polymorphic execution loop
 - [x] Main interactive menu shell (`conio.h`)
 
 ---
 
-## 📋 Remaining To-Do Checklist
+## 📋 Open Task Checklist
 
-Collaborators can pick any unchecked task below to implement:
+Collaborators can pick any open task below to implement:
 
-### Task Engine Implementation
-- [ ] Implement `RenameTask::execute()` (real file rename & virtual mode handling)
+### ⚙️ Task Engine
+- [ ] Implement `RenameTask::execute()` (real file rename & virtual mode)
 - [ ] Implement `MoveTask::execute()` (file relocation across directory paths)
-- [ ] Implement `CreateFolderTask::execute()` (directory creation using `mkdir()`)
-- [ ] Implement `BackupTask::execute()` (byte-by-byte binary file copying)
+- [ ] Implement `CreateFolderTask::execute()` (directory creation via `mkdir()`)
+- [ ] Implement `BackupTask::execute()` (byte-by-byte binary file copy)
 - [ ] Implement `VerifyTask::execute()` (file existence and non-zero size verification)
-- [ ] Implement `SmartSortTask::execute()` (rule lookup & automatic file relocation)
+- [ ] Implement `SmartSortTask::execute()` (rule lookup & automatic relocation)
 
-### SmartSort Rules Engine
+### 🔍 SmartSort Rules Engine
 - [ ] Implement `FileTypeRule::matches()` (matching file extensions via `strcmp`)
 - [ ] Implement `SizeRule::matches()` (matching files by byte size threshold)
 - [ ] Implement `AgeRule::matches()` (matching files by age in days)
 - [ ] Implement `SmartSortEngine::getDestination()` (scanning active rules)
 - [ ] Implement `SmartSortEngine::showAllRules()` & rule management
 
-### Resilience Engine
+### 🛡️ Resilience Engine
 - [ ] Implement `ResilienceEngine::detectError()` (identifying missing folders/files)
-- [ ] Implement `ResilienceEngine::autoFix()` (automatically creating missing destination folders)
-- [ ] Implement `ResilienceEngine::retryTask()` (executing retry attempts up to `maxRetries`)
+- [ ] Implement `ResilienceEngine::autoFix()` (auto-creating missing destination folders)
+- [ ] Implement `ResilienceEngine::retryTask()` (retry attempts up to `maxRetries`)
 - [ ] Implement `ResilienceEngine::handle()` (top-level recovery dispatcher)
 
-### UI & Interactive Workflow Management
+### 💻 UI & Interactive Menu Integration
 - [ ] Wire interactive workflow creation in `main()` menu (Option 1)
 - [ ] Wire interactive task viewing in `main()` menu (Option 2)
 - [ ] Wire execution trigger in `main()` menu (Option 3)
@@ -120,9 +129,12 @@ Collaborators can pick any unchecked task below to implement:
 
 ---
 
-## ⚙️ How to Compile & Run in Turbo C++
+## 💻 How to Compile & Run in Turbo C++
 
-1. Open **Turbo C++**.
-2. Go to **File -> Open** and select `FLOWFORG.CPP`.
+1. Open **Turbo C++ (Borland IDE)**.
+2. Go to **File ➔ Open** and select `FLOWFORG.CPP`.
 3. Press **Ctrl + F9** to compile and run.
-4. Use the interactive menu to create, inspect, and execute workflows!
+4. Navigate the interactive menu using numerical choices.
+
+> [!TIP]
+> Ensure path separators use `\\` when specifying destination folders in DOS mode.
