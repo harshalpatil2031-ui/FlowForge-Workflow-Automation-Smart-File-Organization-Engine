@@ -143,6 +143,55 @@ public:
   {
   }
 };
+
+class RenameTask:public Task
+{
+  private:
+  char newname[50];
+  public:
+  RenameTask(FileInfo f,const char *newFileName):Task("Rename Task",f)
+  {
+    strcpy(newname,newFileName);
+  }
+
+  void describe()
+  {
+    cout<<"[Rename Task]"<<file.name<<"->"<<newname<<endl;
+  }
+  TaskResult execute()
+  {
+    if(file.isVirtual==1)
+    {
+      strcpy(file.name,newname);
+      cout<<"[SIMULATED] Rename to:"<<newname<<endl;
+      return SUCCESS;
+    }
+  
+   // Build source & destination full paths for real files
+   char srcFull[256],destFull[256];
+   strcpy(srcFull,file.sourcePath);
+   strcat(srcFull,file.name);
+
+   strcpy(destFull,file.sourcePath);
+   strcat(destFull,newname);
+
+   if (rename(srcFull,destFull)==0)
+   {
+      strcpy(file.name,newname);
+      cout<<"\nRenamed Successfully";
+      return SUCCESS;
+   }
+   else
+   {
+      cout<<"\nRename Failed";
+      return FAILURE;
+   }
+  }
+  ~RenameTask()
+  {
+  }
+};
+
 class WorkFlowManager
 {
 private:
