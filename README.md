@@ -93,6 +93,7 @@ FlowForge/
 - [x] `Logger` class (writes history to `FLOW.LOG`)
 - [x] `WorkflowManager` class skeleton & polymorphic execution loop
 - [x] Main interactive menu shell (`conio.h`)
+- [x] `RenameTask` class (real file rename & virtual sandbox mode)
 
 ---
 
@@ -101,7 +102,6 @@ FlowForge/
 Collaborators can pick any open task below to implement:
 
 ### ⚙️ Task Engine
-- [ ] Implement `RenameTask::execute()` (real file rename & virtual mode)
 - [ ] Implement `MoveTask::execute()` (file relocation across directory paths)
 - [ ] Implement `CreateFolderTask::execute()` (directory creation via `mkdir()`)
 - [ ] Implement `BackupTask::execute()` (byte-by-byte binary file copy)
