@@ -143,7 +143,7 @@ public:
   {
   }
 };
-
+// Rename Task 
 class RenameTask:public Task
 {
   private:
@@ -191,6 +191,47 @@ class RenameTask:public Task
   {
   }
 };
+//Create Folder Task
+class Createfoldertask:public Task
+{ 
+  private:
+    char Folderpath[128];
+  public:
+   Createfoldertask(FileInfo f,const char* path):Task("Create Folder Task",f)
+   {
+      strcpy(Folderpath,path);
+   }
+   void describe()
+   {
+     cout<<"[Create Folder Task]"<<Folderpath<<endl;
+   }
+   TaskResult execute()
+   {
+      if(file.isVirtual==1)
+      {
+        cout<<"Create Folder:"<<Folderpath<<endl;
+        return SUCCESS;
+      }
+      if(access(Folderpath,0)==0)
+      {
+         cout<<"Folder already exists. Skipping."<<endl;
+         return SKIPPED;
+      }
+      if(mkdir(Folderpath)==0)
+      {
+        cout<<"Folder Created Succesfully"<<endl;
+        return SUCCESS;
+      }
+      else
+      {
+        cout<<"Failed to create folder"<<endl;
+        return FAILURE;
+      }
+   }
+~Createfoldertask()
+{
+}
+};
 
 class WorkFlowManager
 {
@@ -233,7 +274,7 @@ public:
 	 taskList[i]->describe();
       }
    }
-   void executeWorkFLow()
+   void executeWorkFlow()
    {
      cout<<"\nStarting WorkFlow:"<<workflowName<<endl;
      cout<<"------------------"<<endl;
@@ -286,6 +327,7 @@ int main()
 {
   clrscr();
   int choice;
+  Logger sysLogger("FLOW.LOG");
   do
   {
      cout<<"-----------------------------------"<<endl;
@@ -298,7 +340,7 @@ int main()
      cout<<"\n3.Execute WorlFlow";
      cout<<"\n4.View Execution log";
      cout<<"\n5.Clear Log";
-     cout<<"\n0. Exit";
+     cout<<"\n6. Exit";
      cout<<endl;
      cout<<"\nEnter choice:";
      cin>>choice;
@@ -315,9 +357,13 @@ int main()
 	   break;
 	case 4:
 	   cout<<"\nView Execution Log"<<endl;
+     sysLogger.showLog();
+     getch();
 	   break;
 	case 5:
 	    cout<<"\nClear Log"<<endl;
+      sysLogger.clearlog();
+      getch();
 	    break;
 	case 6:
 	   cout<<"\nGoodbye"<<endl;
@@ -325,8 +371,9 @@ int main()
 	default:
 	   cout<<"\nINvalid choice";
 	}
-     }while(choice!=0);
-  return 0;
-  getch();
+     }while(choice!=6);
+    getch(); 
+     return 0;
+
 }
 
