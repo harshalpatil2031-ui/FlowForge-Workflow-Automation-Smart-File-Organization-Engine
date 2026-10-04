@@ -94,6 +94,7 @@ FlowForge/
 - [x] `WorkflowManager` class skeleton & polymorphic execution loop
 - [x] Main interactive menu shell (`conio.h`)
 - [x] `RenameTask` class (real file rename & virtual sandbox mode)
+- [x] `CreateFolderTask` class (directory creation via `mkdir()`)
 
 ---
 
@@ -103,7 +104,6 @@ Collaborators can pick any open task below to implement:
 
 ### ⚙️ Task Engine
 - [ ] Implement `MoveTask::execute()` (file relocation across directory paths)
-- [ ] Implement `CreateFolderTask::execute()` (directory creation via `mkdir()`)
 - [ ] Implement `BackupTask::execute()` (byte-by-byte binary file copy)
 - [ ] Implement `VerifyTask::execute()` (file existence and non-zero size verification)
 - [ ] Implement `SmartSortTask::execute()` (rule lookup & automatic relocation)
