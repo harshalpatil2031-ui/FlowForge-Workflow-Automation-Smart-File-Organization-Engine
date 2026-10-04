@@ -3,6 +3,7 @@
 #include<string.h>
 #include<stdio.h>
 #include<dir.h>
+#include<io.h>
 
 //FILEINFO- THIS data is shared all throughout the code
 struct FileInfo
