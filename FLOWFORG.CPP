@@ -1,4 +1,5 @@
 #include<iostream.h>
+#include<io.h>
 #include<conio.h>
 #include<string.h>
 #include<stdio.h>
@@ -107,8 +108,23 @@ public:
       fclose(f);
     }
   }
-  void showLog();
-  
+  void showLog()
+  {
+   char line[256];
+   FILE *f=fopen(logFilePath,"r");
+   if(f==NULL)
+   {
+     cout<<"\n No log file found."<<endl;
+     return;
+   }
+   cout<<"\n-----Execution Log-----"<<endl;
+   while(fgets(line,sizeof(line),f)!=NULL)
+   {
+      cout<<line;
+   }
+   cout<<"-------------"<<endl;
+   fclose(f);
+  }
 
   void clearlog()
   {
@@ -128,27 +144,6 @@ public:
   {
   }
 };
-//defining show log outside the class
-void Logger::showLog()
-{
-  char line[256];
-  FILE *f=fopen(logFilePath,"r");
-  if(f==NULL)
-  {
-    cout<<"\n No log file found."<<endl;
-    return;
-  }
-  cout<<"\n-----Execution Log-----"<<endl;
-  
-  // Turbo C++ allows while loops here because it is no longer an inline class method
-  while(fgets(line,sizeof(line),f)!=NULL)
-  {
-    cout<<line;
-  }
-  cout<<"-------------"<<endl;
-  fclose(f);
-}
-
 // Rename Task 
 class RenameTask:public Task
 {
@@ -239,7 +234,6 @@ class Createfoldertask:public Task
 }
 };
 
-//Moving files respectively
 class MoveTask : public Task
 {
   private:
@@ -434,7 +428,7 @@ int main()
 	   cout<<"\nINvalid choice";
 	}
      }while(choice!=6);
-    getch(); 
+      getch(); 
      return 0;
 
 }
