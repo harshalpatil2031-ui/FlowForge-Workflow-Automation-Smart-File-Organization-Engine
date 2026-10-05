@@ -1,4 +1,5 @@
 #include<iostream.h>
+#include<io.h>
 #include<conio.h>
 #include<string.h>
 #include<stdio.h>
@@ -234,6 +235,61 @@ class Createfoldertask:public Task
 }
 };
 
+class MoveTask : public Task
+{
+  private:
+    char targetFolder[128];
+
+  public:
+    MoveTask(FileInfo f, const char* destFolder) : Task("Move Task", f)
+    {
+      strcpy(targetFolder, destFolder);
+    }
+
+    void describe()
+    {
+      cout << "[Move Task] " << file.name << " -> " << targetFolder << endl;
+    }
+
+    TaskResult execute()
+    {
+      
+      if (file.isVirtual == 1)
+      {
+        strcpy(file.sourcePath, targetFolder);
+        cout << "[SIMULATED] Move to: " << targetFolder << endl;
+        return SUCCESS;
+      }
+      
+      //source & destination full paths 
+      char srcFull[256], destFull[256];
+      
+      strcpy(srcFull, file.sourcePath);
+      strcat(srcFull, file.name);
+
+      strcpy(destFull, targetFolder);
+      strcat(destFull, file.name);
+
+      // move operation
+      if (rename(srcFull, destFull) == 0)
+      {
+         // Update the file's current location so subsequent tasks know where it is
+         strcpy(file.sourcePath, targetFolder);
+         cout << "\nMoved Successfully to " << targetFolder << endl;
+         return SUCCESS;
+      }
+      else
+      {
+         cout << "\nMove Failed (Check if destination folder exists)" << endl;
+         return FAILURE;
+      }
+    }
+
+    ~MoveTask()
+    {
+    }
+};
+
 class WorkFlowManager
 {
 private:
@@ -373,7 +429,7 @@ int main()
 	   cout<<"\nINvalid choice";
 	}
      }while(choice!=6);
-    getch(); 
+      getch(); 
      return 0;
 
 }
