@@ -289,7 +289,81 @@ class MoveTask : public Task
     {
     }
 };
+// Backup Task
+class BackupTask : public Task
+{
+private:
+    char backupPath[128];
 
+public:
+
+    BackupTask(FileInfo f, const char* destination)
+        : Task("Backup Task", f)
+    {
+        strcpy(backupPath, destination);
+    }
+
+    void describe()
+    {
+        cout << "[Backup Task] "
+             << file.name << " -> "
+             << backupPath << endl;
+    }
+
+    TaskResult execute()
+    {
+        char sourceFilePath[256];
+        char backupFilePath[256];
+
+        // Create complete source file path
+        strcpy(sourceFilePath, file.sourcePath);
+        strcat(sourceFilePath, file.name);
+
+        // Create complete backup file path
+        strcpy(backupFilePath, backupPath);
+        strcat(backupFilePath, file.name);
+
+        // Open original file for binary reading
+        FILE *sourceFile = fopen(sourceFilePath, "rb");
+
+        if (sourceFile == NULL)
+        {
+            cout << "\nSource file not found." << endl;
+            return FAILURE;
+        }
+
+        // Open backup file for binary writing
+        FILE *backupFile = fopen(backupFilePath, "wb");
+
+        if (backupFile == NULL)
+        {
+            cout << "\nCannot create backup file." << endl;
+            fclose(sourceFile);
+            return FAILURE;
+        }
+
+        // Read and copy one byte at a time
+        int byteData;
+
+        while ((byteData = fgetc(sourceFile)) != EOF)
+        {
+            fputc(byteData, backupFile);
+        }
+
+        // Close both files
+        fclose(sourceFile);
+        fclose(backupFile);
+
+        cout << "\nBackup created successfully." << endl;
+        cout << "Backup location: " << backupFilePath << endl;
+
+        return SUCCESS;
+    }
+
+    ~BackupTask()
+    {
+    }
+};
 class WorkFlowManager
 {
 private:
