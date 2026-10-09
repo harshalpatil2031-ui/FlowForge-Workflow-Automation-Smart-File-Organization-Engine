@@ -95,18 +95,15 @@ FlowForge/
 - [x] Main interactive menu shell (`conio.h`)
 - [x] `RenameTask` class (real file rename & virtual sandbox mode)
 - [x] `CreateFolderTask` class (directory creation via `mkdir()`)
-- [ ] Implement `MoveTask::execute()` (file relocation across directory paths)
-
+- [X] Implement `MoveTask::execute()` (file relocation across directory paths)
+- [X] Implement `BackupTask::execute()` (byte-by-byte binary file copy)
+- [X] Implement `VerifyTask::execute()` (file existence and non-zero size verification)
+- [X] Implement `SmartSortTask::execute()` (rule lookup & automatic relocation)
 ---
 
 ## 📋 Open Task Checklist
 
 Collaborators can pick any open task below to implement:
-
-### ⚙️ Task Engine
-- [ ] Implement `BackupTask::execute()` (byte-by-byte binary file copy)
-- [ ] Implement `VerifyTask::execute()` (file existence and non-zero size verification)
-- [ ] Implement `SmartSortTask::execute()` (rule lookup & automatic relocation)
 
 ### 🔍 SmartSort Rules Engine
 - [ ] Implement `FileTypeRule::matches()` (matching file extensions via `strcmp`)
