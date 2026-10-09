@@ -1,5 +1,4 @@
 #include<iostream.h>
-#include<io.h>
 #include<conio.h>
 #include<string.h>
 #include<stdio.h>
@@ -437,6 +436,64 @@ public:
     {
     }
 };
+class SmartSortTask : public Task
+{
+  private:
+    SmartSortEngine *engine;
+
+  public:
+      SmartSortTask(FileInfo f, SmartSortEngine *sortEngine):Task("SmartSort Task", f)
+    {
+        engine = sortEngine;
+    }
+    void describe()
+    {
+        cout << "[SmartSort Task]"<<file.name<<"(."<<file.extension<<")"<<endl;
+    }
+
+  TaskResult execute()
+  {
+        char sourcefile[256];
+        char destination[128];
+        char destinationfile[256];
+
+        if (engine == NULL)
+        {
+          return FAILURE;
+        }
+
+        strcpy(destination, engine->getDestination(file));
+
+        if (strcmp(destination, "Unsorted") == 0)
+        {
+          return SKIPPED;
+        }
+
+        if (file.isVirtual)
+        {
+            strcpy(file.destPath, destination);
+            cout << "[SmartSort]"<<file.name<<"would move to"<<destination<<endl;
+            return SUCCESS;
+        }
+
+        strcpy(sourcefile,file.sourcePath);
+        strcat(sourcefile,file.name);
+
+        strcpy(destinationfile,destination);
+        strcat(destinationfile,file.name);
+
+        if (rename(sourcefile,destinationfile) == 0)
+        {
+            strcpy(file.destPath,destination);
+            strcpy(file.sourcePath,destination);
+            cout<<"[SmartSort] Moved"<<file.name<<"to"<<destination<<endl;
+            return SUCCESS;
+        }
+
+        cout<<"[SmartSort] Could not move "<<file.name<<endl;
+        return FAILURE;
+    }
+};
 class WorkFlowManager
 {
 private:
@@ -526,6 +583,7 @@ public:
        }
     }
 };
+
 
 int main()
 {
