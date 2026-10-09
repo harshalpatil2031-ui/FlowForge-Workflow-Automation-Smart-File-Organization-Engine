@@ -364,6 +364,79 @@ public:
     {
     }
 };
+// Verify Task
+class VerifyTask : public Task
+{
+public:
+    VerifyTask(FileInfo f)
+        : Task("Verify Task", f)
+    {
+    }
+
+    void describe()
+    {
+        cout << "[Verify Task] Checking file: "
+             << file.name << endl;
+    }
+
+    TaskResult execute()
+    {
+        char fullPath[256];
+
+        // Create the complete file path
+        strcpy(fullPath, file.sourcePath);
+        strcat(fullPath, file.name);
+
+        // Open the file for reading
+        FILE *fp = fopen(fullPath, "rb");
+
+        if (fp == NULL)
+        {
+            cout << "\nVerification Failed: File not found."
+                 << endl;
+            return FAILURE;
+        }
+
+        // Move to the end of the file
+        if (fseek(fp, 0L, SEEK_END) != 0)
+        {
+            fclose(fp);
+            cout << "\nVerification Failed: Cannot read file size."
+                 << endl;
+            return FAILURE;
+        }
+
+        // Get the file size
+        long fileSize = ftell(fp);
+
+        fclose(fp);
+
+        if (fileSize < 0)
+        {
+            cout << "\nVerification Failed: Cannot determine file size."
+                 << endl;
+            return FAILURE;
+        }
+
+        if (fileSize == 0)
+        {
+            cout << "\nVerification Failed: File is empty."
+                 << endl;
+            return FAILURE;
+        }
+
+        cout << "\nVerification Successful!"
+             << "\nFile exists and contains data."
+             << "\nFile size: " << fileSize << " bytes"
+             << endl;
+
+        return SUCCESS;
+    }
+
+    ~VerifyTask()
+    {
+    }
+};
 class WorkFlowManager
 {
 private:
