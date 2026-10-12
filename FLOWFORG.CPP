@@ -87,6 +87,31 @@ public:
   }
 };
 
+class FileTypeRule : public Rule
+{
+private:
+    char targetExtension[10];
+
+public:
+    FileTypeRule(const char* ext, const char* destFolder)
+        : Rule(destFolder)
+    {
+        strcpy(targetExtension, ext);
+    }
+
+    int matches(FileInfo file)
+    {
+        return (strcmp(file.extension, targetExtension) == 0);
+    }
+
+    void describe()
+    {
+        cout << "[File Type Rule] "
+             << targetExtension << " -> "
+             << destinationFolder << endl;
+    }
+};
+
 //Logger-saves exection history of workflows for user record
 class Logger
 {
