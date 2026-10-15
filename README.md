@@ -99,6 +99,8 @@ FlowForge/
 - [X] Implement `BackupTask::execute()` (byte-by-byte binary file copy)
 - [X] Implement `VerifyTask::execute()` (file existence and non-zero size verification)
 - [X] Implement `SmartSortTask::execute()` (rule lookup & automatic relocation)
+- [X] Implement `SmartSortEngine::getDestination()` (scanning active rules)
+- [X] Implement `SmartSortEngine::showAllRules()` & rule management
 ---
 
 ## 📋 Open Task Checklist
@@ -109,8 +111,7 @@ Collaborators can pick any open task below to implement:
 - [ ] Implement `FileTypeRule::matches()` (matching file extensions via `strcmp`)
 - [ ] Implement `SizeRule::matches()` (matching files by byte size threshold)
 - [ ] Implement `AgeRule::matches()` (matching files by age in days)
-- [ ] Implement `SmartSortEngine::getDestination()` (scanning active rules)
-- [ ] Implement `SmartSortEngine::showAllRules()` & rule management
+
 
 ### 🛡️ Resilience Engine
 - [ ] Implement `ResilienceEngine::detectError()` (identifying missing folders/files)
