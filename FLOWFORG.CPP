@@ -457,6 +457,64 @@ public:
     {
     }
 };
+
+class SmartSortEngine
+{
+  private:
+    Rule* ruleList[10];
+    int ruleCount;
+  public:
+    SmartSortEngine()
+    {
+       ruleCount=0;
+    }
+    void addRule(Rule *r)
+    {
+      if(ruleCount<10)
+      {
+        ruleList[ruleCount]=r;
+        ruleCount++;
+      }
+      else
+      {
+        cout<<"\nRule list full! Max 10 Rules allowed"<<endl;
+      }
+    }
+    const char* getDestination(FileInfo file)
+    {
+      for(int i=0;i<ruleCount;i++)
+      {
+        if(ruleList[i]->matches(file)==1)
+        {
+          return ruleList[i]->getDestination();
+        }
+      }
+      return "Unsorted";
+    }
+    void showAllRules()
+    {
+      cout<<"\n-------Smart sort Rules--------"<<endl;
+      if(ruleCount==0)
+      {
+        cout<<"\nNo rules added yet";
+        return ;
+      }
+      for(int i=0;i<ruleCount;i++)
+      {
+        cout<<i+1<<". ";
+        ruleList[i]->describe();
+      }
+      cout<<"------------------"<<endl;
+    }
+    ~SmartSortEngine()
+    {
+      for(int i=0;i<ruleCount;i++)
+      {
+        delete ruleList[i];
+      }
+    }
+};
+
 class SmartSortTask : public Task
 {
   private:
@@ -605,58 +663,194 @@ public:
     }
 };
 
-
 int main()
 {
   clrscr();
   int choice;
+  WorkFlowManager *workflow = NULL;
   Logger sysLogger("FLOW.LOG");
+  
   do
-  {
-     cout<<"-----------------------------------"<<endl;
-     cout<<"             F L O W F O R G E     "<<endl;
-     cout<<"  Workflow Automation & Smart Sort "<<endl;
-     cout<<"-----------------------------------"<<endl;
+   {
+      cout<<"-----------------------------------"<<endl;
+      cout<<"             F L O W F O R G E     "<<endl;
+      cout<<"  Workflow Automation & Smart Sort "<<endl;
+      cout<<"-----------------------------------"<<endl;
 
-     cout<<"\n1.Create New Workflow";
-     cout<<"\n2.View Wokflow Tasks";
-     cout<<"\n3.Execute WorlFlow";
-     cout<<"\n4.View Execution log";
-     cout<<"\n5.Clear Log";
-     cout<<"\n6. Exit";
-     cout<<endl;
-     cout<<"\nEnter choice:";
-     cin>>choice;
-     switch(choice)
-     {
-	case 1:
-	   cout<<"\nCreate Workflow"<<endl;
-	   break;
-	case 2:
-	   cout<<"\nView Tasks"<<endl;
-	   break;
-	case 3:
-	   cout<<"\nExecute WorlFlow"<<endl;
-	   break;
-	case 4:
-	   cout<<"\nView Execution Log"<<endl;
-     sysLogger.showLog();
-     getch();
-	   break;
-	case 5:
-	    cout<<"\nClear Log"<<endl;
-      sysLogger.clearlog();
-      getch();
-	    break;
-	case 6:
-	   cout<<"\nGoodbye"<<endl;
-	   break;
-	default:
-	   cout<<"\nINvalid choice";
-	}
-     }while(choice!=6);
-      getch(); 
-     return 0;
+      cout<<"\n1.Create New Workflow";
+      cout<<"\n2.View Workflow Tasks";
+      cout<<"\n3.Execute Workflow";
+      cout<<"\n4.View Execution Log";
+      cout<<"\n5.Clear Log";
+      cout<<"\n6.Exit";
+      cout<<endl;
+      cout<<"\nEnter choice:";
+      cin>>choice;
 
+      switch(choice)
+      {
+         case 1:
+         {
+            char name[64];
+
+            if(workflow!=NULL)
+            {
+               cout<<"\nWorkflow already exists!";
+               cout<<"\nPlease exit or use the existing workflow first.";
+               getch();
+               break;
+            }
+
+            cout<<"\nEnter Workflow Name:";
+            cin>>name;
+
+            workflow=new WorkFlowManager(name);
+
+            int taskChoice;
+
+            do
+            {
+               cout<<"\n------ Add Tasks ------";
+               cout<<"\n1.Rename File";
+               cout<<"\n2.Create Folder";
+               cout<<"\n3.Move File";
+               cout<<"\n4.Backup File";
+               cout<<"\n5.Verify File";
+               cout<<"\n0.Finish Adding Tasks";
+               cout<<"\nEnter choice:";
+               cin>>taskChoice;
+
+               if(taskChoice==0)
+               {
+                  break;
+               }
+
+               if(taskChoice<1 || taskChoice>5)
+               {
+                  cout<<"\nInvalid Task Choice!";
+                  continue;
+               }
+
+               FileInfo f;
+
+               cout<<"\nEnter File Name:";
+               cin>>f.name;
+
+               cout<<"Enter Extension:";
+               cin>>f.extension;
+
+               cout<<"Enter Source Folder Path (end with \\):";
+               cin>>f.sourcePath;
+
+               f.sizeBytes=0;
+               f.ageDays=0;
+               f.isVirtual=0;
+               f.destPath[0]='\0';
+
+               if(taskChoice==1)
+               {
+                  char newName[50];
+
+                  cout<<"Enter New File Name:";
+                  cin>>newName;
+
+                  workflow->addTask(
+                     new RenameTask(f,newName));
+               }
+               else if(taskChoice==2)
+               {
+                  char folderPath[128];
+
+                  cout<<"Enter Folder Path to Create:";
+                  cin>>folderPath;
+
+                  workflow->addTask(
+                     new Createfoldertask(f,folderPath));
+               }
+               else if(taskChoice==3)
+               {
+                  char destFolder[128];
+
+                  cout<<"Enter Destination Folder (end with \\):";
+                  cin>>destFolder;
+
+                  workflow->addTask(
+                     new MoveTask(f,destFolder));
+               }
+               else if(taskChoice==4)
+               {
+                  char backupPath[128];
+
+                  cout<<"Enter Backup Folder (end with \\):";
+                  cin>>backupPath;
+
+                  workflow->addTask(
+                     new BackupTask(f,backupPath));
+               }
+               else if(taskChoice==5)
+               {
+                  workflow->addTask(
+                     new VerifyTask(f));
+               }
+
+            }while(taskChoice!=0);
+
+            cout<<"\nWorkflow Created Successfully!"<<endl;
+            getch();
+            break;
+         }
+
+         case 2:
+            if(workflow!=NULL)
+            {
+               workflow->showTasks();
+            }
+            else
+            {
+               cout<<"\nCreate a Workflow First!"<<endl;
+            }
+            getch();
+            break;
+
+         case 3:
+            if(workflow!=NULL)
+            {
+               workflow->executeWorkFlow();
+            }
+            else
+            {
+               cout<<"\nCreate a Workflow First!"<<endl;
+            }
+            getch();
+            break;
+
+         case 4:
+            cout<<"\nView Execution Log"<<endl;
+            sysLogger.showLog();
+            getch();
+            break;
+
+         case 5:
+            cout<<"\nClear Log"<<endl;
+            sysLogger.clearlog();
+            getch();
+            break;
+
+         case 6:
+            cout<<"\nGoodbye"<<endl;
+            break;
+
+         default:
+            cout<<"\nInvalid Choice!"<<endl;
+            getch();
+      }
+
+   }while(choice!=6);
+
+   delete workflow;
+   workflow=NULL;
+
+   getch();
+   return 0;
 }
 
