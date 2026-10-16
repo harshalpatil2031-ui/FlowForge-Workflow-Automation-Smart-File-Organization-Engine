@@ -107,6 +107,64 @@ public:
              << destinationFolder << endl;
     }
 };
+
+class SizeRule : public Rule
+{
+private:
+    long minSizeBytes;
+
+public:
+    SizeRule(long size, const char* folder)
+        : Rule(folder)
+    {
+        minSizeBytes = size;
+    }
+
+    int matches(FileInfo file)
+    {
+        if (file.sizeBytes >= minSizeBytes)
+            return 1;
+        else
+            return 0;
+    }
+
+    void describe()
+    {
+        cout << "Files >= " << minSizeBytes
+             << " bytes -> "
+             << destinationFolder << endl;
+    }
+};
+
+
+class AgeRule : public Rule
+{
+private:
+    int minAgeDays;
+
+public:
+    AgeRule(int days, const char* folder)
+        : Rule(folder)
+    {
+        minAgeDays = days;
+    }
+
+    int matches(FileInfo file)
+    {
+        if (file.ageDays >= minAgeDays)
+            return 1;
+        else
+            return 0;
+    }
+
+    void describe()
+    {
+        cout << "Files >= " << minAgeDays
+             << " days old -> "
+             << destinationFolder << endl;
+    }
+};
+
 //Logger-saves exection history of workflows for user record
 class Logger
 {
@@ -667,7 +725,9 @@ int main()
 {
   clrscr();
   int choice;
+
   WorkFlowManager *workflow = NULL;
+  SmartSortEngine *sortEngine = NULL;
   Logger sysLogger("FLOW.LOG");
   
   do
@@ -682,7 +742,7 @@ int main()
       cout<<"\n3.Execute Workflow";
       cout<<"\n4.View Execution Log";
       cout<<"\n5.Clear Log";
-      cout<<"\n6.Exit";
+      cout << "\n6.Exit";
       cout<<endl;
       cout<<"\nEnter choice:";
       cin>>choice;
@@ -716,6 +776,7 @@ int main()
                cout<<"\n3.Move File";
                cout<<"\n4.Backup File";
                cout<<"\n5.Verify File";
+               cout<<"\n6.Smart Sort File";
                cout<<"\n0.Finish Adding Tasks";
                cout<<"\nEnter choice:";
                cin>>taskChoice;
@@ -725,7 +786,7 @@ int main()
                   break;
                }
 
-               if(taskChoice<1 || taskChoice>5)
+               if(taskChoice < 1 || taskChoice > 6)
                {
                   cout<<"\nInvalid Task Choice!";
                   continue;
@@ -746,6 +807,15 @@ int main()
                f.ageDays=0;
                f.isVirtual=0;
                f.destPath[0]='\0';
+
+               if(taskChoice == 6)
+                  {
+                      cout << "Enter file size in bytes: ";
+                      cin >> f.sizeBytes;
+
+                      cout << "Enter file age in days: ";
+                      cin >> f.ageDays;
+                  }
 
                if(taskChoice==1)
                {
@@ -787,11 +857,83 @@ int main()
                   workflow->addTask(
                      new BackupTask(f,backupPath));
                }
-               else if(taskChoice==5)
-               {
-                  workflow->addTask(
-                     new VerifyTask(f));
-               }
+               else if(taskChoice == 5)
+                {
+                    workflow->addTask(new VerifyTask(f));
+                }
+               
+              else if(taskChoice == 6)
+                {
+                  if(sortEngine == NULL)
+                      {
+                         sortEngine = new SmartSortEngine();
+
+                        int numberOfRules;
+                        int ruleType;
+                        int i;
+                        long minSize;
+                        int minAge;
+                        char extension[10];
+                        char destination[128];
+
+                        cout << "\nHow many rules (1-10)? ";
+                        cin >> numberOfRules;
+
+                        if(numberOfRules < 1 || numberOfRules > 10)
+                            {
+                              cout << "\nInvalid number of rules!";
+                             delete sortEngine;
+                             sortEngine = NULL;
+                            continue;
+                            }
+
+                        for(i = 0; i < numberOfRules; i++)
+                              {
+                                  cout << "\n1. File Type Rule";
+                                cout << "\n2. File Size Rule";
+            cout << "\n3. File Age Rule";
+            cout << "\nEnter rule type: ";
+            cin >> ruleType;
+
+            cout << "Enter destination folder (end with \\): ";
+            cin >> destination;
+
+            if(ruleType == 1)
+            {
+                cout << "Enter extension without dot: ";
+                cin >> extension;
+
+                sortEngine->addRule(
+                    new FileTypeRule(extension, destination));
+            }
+            else if(ruleType == 2)
+            {
+                cout << "Enter minimum size in bytes: ";
+                cin >> minSize;
+
+                sortEngine->addRule(
+                    new SizeRule(minSize, destination));
+            }
+            else if(ruleType == 3)
+            {
+                cout << "Enter minimum age in days: ";
+                cin >> minAge;
+
+                sortEngine->addRule(
+                    new AgeRule(minAge, destination));
+            }
+            else
+            {
+                cout << "Invalid rule type!";
+                i--;
+            }
+          }
+        }
+
+    workflow->addTask(
+        new SmartSortTask(f, sortEngine));
+}
+
 
             }while(taskChoice!=0);
 
@@ -847,8 +989,11 @@ int main()
 
    }while(choice!=6);
 
-   delete workflow;
-   workflow=NULL;
+    delete workflow;
+    workflow = NULL;
+
+    delete sortEngine;
+    sortEngine = NULL;
 
    getch();
    return 0;
