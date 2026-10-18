@@ -95,12 +95,16 @@ FlowForge/
 - [x] Main interactive menu shell (`conio.h`)
 - [x] `RenameTask` class (real file rename & virtual sandbox mode)
 - [x] `CreateFolderTask` class (directory creation via `mkdir()`)
-- [X] Implement `MoveTask::execute()` (file relocation across directory paths)
-- [X] Implement `BackupTask::execute()` (byte-by-byte binary file copy)
-- [X] Implement `VerifyTask::execute()` (file existence and non-zero size verification)
-- [X] Implement `SmartSortTask::execute()` (rule lookup & automatic relocation)
-- [X] Implement `SmartSortEngine::getDestination()` (scanning active rules)
-- [X] Implement `SmartSortEngine::showAllRules()` & rule management
+- [X] Implemented `MoveTask::execute()` (file relocation across directory paths)
+- [X] Implemented `BackupTask::execute()` (byte-by-byte binary file copy)
+- [X] Implemented `VerifyTask::execute()` (file existence and non-zero size verification)
+- [X] Implemented `SmartSortTask::execute()` (rule lookup & automatic relocation)
+- [X] Implemented `SmartSortEngine::getDestination()` (scanning active rules)
+- [X] Implemented `SmartSortEngine::showAllRules()` & rule management
+- [X] Implemented `FileTypeRule::matches()` (matching file extensions via `strcmp`)
+- [X] Implemented `SizeRule::matches()` (matching files by byte size threshold)
+- [X] Implemented `AgeRule::matches()` (matching files by age in days)
+
 ---
 
 ## 📋 Open Task Checklist
@@ -108,10 +112,7 @@ FlowForge/
 Collaborators can pick any open task below to implement:
 
 ### 🔍 SmartSort Rules Engine
-- [ ] Implement `FileTypeRule::matches()` (matching file extensions via `strcmp`)
-- [ ] Implement `SizeRule::matches()` (matching files by byte size threshold)
-- [ ] Implement `AgeRule::matches()` (matching files by age in days)
-
+-Implementation Complete
 
 ### 🛡️ Resilience Engine
 - [ ] Implement `ResilienceEngine::detectError()` (identifying missing folders/files)
