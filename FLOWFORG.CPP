@@ -4,6 +4,8 @@
 #include<stdio.h>
 #include<dir.h>
 #include<io.h>
+#include <sys/stat.h>
+#include <time.h>
 
 //FILEINFO- THIS data is shared all throughout the code
 struct FileInfo
@@ -98,7 +100,7 @@ public:
 
     int matches(FileInfo file)
     {
-        return strcmp(file.extension, extension) == 0;
+      return strcmpi(file.extension, extension) == 0;
     }
 
     void describe()
@@ -737,16 +739,15 @@ int main()
       cout<<"  Workflow Automation & Smart Sort "<<endl;
       cout<<"-----------------------------------"<<endl;
 
-      cout<<"\n1.Create New Workflow";
-      cout<<"\n2.View Workflow Tasks";
-      cout<<"\n3.Execute Workflow";
-      cout<<"\n4.View Execution Log";
-      cout<<"\n5.Clear Log";
-      cout << "\n6.Exit";
-      cout<<endl;
-      cout<<"\nEnter choice:";
-      cin>>choice;
-
+     cout<<"\n1.Create New Workflow";
+     cout<<"\n2.View Workflow Tasks";
+     cout<<"\n3.Execute Workflow";
+     cout<<"\n4.View Execution Log";
+     cout<<"\n5.Clear Log";
+     cout<<"\n6.Exit";
+     cout<<endl;
+     cout<<"\nEnter choice:";
+     cin>>choice;
       switch(choice)
       {
          case 1:
@@ -807,15 +808,46 @@ int main()
                f.ageDays=0;
                f.isVirtual=0;
                f.destPath[0]='\0';
+               
+               // Automatically retrieve file size and last-modified time.
+               
+              if(taskChoice == 6)
+                    {
+                      char fullPath[256];
+                      struct stat fileStat;
 
-               if(taskChoice == 6)
-                  {
-                      cout << "Enter file size in bytes: ";
-                      cin >> f.sizeBytes;
+                    // Build the complete file path
+                    strcpy(fullPath, f.sourcePath);
+                    strcat(fullPath, f.name);
 
-                      cout << "Enter file age in days: ";
-                      cin >> f.ageDays;
-                  }
+                    // Retrieve actual file metadata
+                    if(stat(fullPath, &fileStat) != 0)
+                        {
+                          cout << "\nError: Cannot access file!";
+                          cout << "\nCheck the file name and source path.";
+                          cout << endl;
+
+                          continue;
+                        }
+
+                    // Get actual file size in bytes
+                    f.sizeBytes = fileStat.st_size;
+
+                    // Calculate age using last-modified time
+                    time_t currentTime = time(NULL);
+
+                    double seconds =
+                    difftime(currentTime, fileStat.st_mtime);
+
+                    f.ageDays = (int)(seconds / 86400);
+
+                    cout << "\nActual file size: "
+                    << f.sizeBytes << " bytes";
+
+                    cout << "\nFile age: "
+                    << f.ageDays << " days" << endl;
+                    }
+
 
                if(taskChoice==1)
                {
@@ -887,10 +919,10 @@ int main()
                             continue;
                             }
 
-                        for(i = 0; i < numberOfRules; i++)
-                              {
-                                  cout << "\n1. File Type Rule";
-                                cout << "\n2. File Size Rule";
+    for(i = 0; i < numberOfRules; i++)
+      {
+            cout << "\n1. File Type Rule";
+            cout << "\n2. File Size Rule";
             cout << "\n3. File Age Rule";
             cout << "\nEnter rule type: ";
             cin >> ruleType;
@@ -927,7 +959,7 @@ int main()
                 cout << "Invalid rule type!";
                 i--;
             }
-          }
+        }
         }
 
     workflow->addTask(
