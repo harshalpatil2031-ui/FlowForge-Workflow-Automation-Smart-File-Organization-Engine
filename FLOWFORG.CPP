@@ -4,6 +4,8 @@
 #include<stdio.h>
 #include<dir.h>
 #include<io.h>
+#include <sys/stat.h>
+#include <time.h>
 
 //FILEINFO- THIS data is shared all throughout the code
 struct FileInfo
@@ -98,7 +100,7 @@ public:
 
     int matches(FileInfo file)
     {
-        return strcmp(file.extension, extension) == 0;
+      return strcmpi(file.extension, extension) == 0;
     }
 
     void describe()
@@ -107,6 +109,64 @@ public:
              << destinationFolder << endl;
     }
 };
+
+class SizeRule : public Rule
+{
+private:
+    long minSizeBytes;
+
+public:
+    SizeRule(long size, const char* folder)
+        : Rule(folder)
+    {
+        minSizeBytes = size;
+    }
+
+    int matches(FileInfo file)
+    {
+        if (file.sizeBytes >= minSizeBytes)
+            return 1;
+        else
+            return 0;
+    }
+
+    void describe()
+    {
+        cout << "Files >= " << minSizeBytes
+             << " bytes -> "
+             << destinationFolder << endl;
+    }
+};
+
+
+class AgeRule : public Rule
+{
+private:
+    int minAgeDays;
+
+public:
+    AgeRule(int days, const char* folder)
+        : Rule(folder)
+    {
+        minAgeDays = days;
+    }
+
+    int matches(FileInfo file)
+    {
+        if (file.ageDays >= minAgeDays)
+            return 1;
+        else
+            return 0;
+    }
+
+    void describe()
+    {
+        cout << "Files >= " << minAgeDays
+             << " days old -> "
+             << destinationFolder << endl;
+    }
+};
+
 //Logger-saves exection history of workflows for user record
 class Logger
 {
@@ -667,7 +727,9 @@ int main()
 {
   clrscr();
   int choice;
+
   WorkFlowManager *workflow = NULL;
+  SmartSortEngine *sortEngine = NULL;
   Logger sysLogger("FLOW.LOG");
   
   do
@@ -677,16 +739,15 @@ int main()
       cout<<"  Workflow Automation & Smart Sort "<<endl;
       cout<<"-----------------------------------"<<endl;
 
-      cout<<"\n1.Create New Workflow";
-      cout<<"\n2.View Workflow Tasks";
-      cout<<"\n3.Execute Workflow";
-      cout<<"\n4.View Execution Log";
-      cout<<"\n5.Clear Log";
-      cout<<"\n6.Exit";
-      cout<<endl;
-      cout<<"\nEnter choice:";
-      cin>>choice;
-
+     cout<<"\n1.Create New Workflow";
+     cout<<"\n2.View Workflow Tasks";
+     cout<<"\n3.Execute Workflow";
+     cout<<"\n4.View Execution Log";
+     cout<<"\n5.Clear Log";
+     cout<<"\n6.Exit";
+     cout<<endl;
+     cout<<"\nEnter choice:";
+     cin>>choice;
       switch(choice)
       {
          case 1:
@@ -716,6 +777,7 @@ int main()
                cout<<"\n3.Move File";
                cout<<"\n4.Backup File";
                cout<<"\n5.Verify File";
+               cout<<"\n6.Smart Sort File";
                cout<<"\n0.Finish Adding Tasks";
                cout<<"\nEnter choice:";
                cin>>taskChoice;
@@ -725,7 +787,7 @@ int main()
                   break;
                }
 
-               if(taskChoice<1 || taskChoice>5)
+               if(taskChoice < 1 || taskChoice > 6)
                {
                   cout<<"\nInvalid Task Choice!";
                   continue;
@@ -746,6 +808,46 @@ int main()
                f.ageDays=0;
                f.isVirtual=0;
                f.destPath[0]='\0';
+               
+               // Automatically retrieve file size and last-modified time.
+               
+              if(taskChoice == 6)
+                    {
+                      char fullPath[256];
+                      struct stat fileStat;
+
+                    // Build the complete file path
+                    strcpy(fullPath, f.sourcePath);
+                    strcat(fullPath, f.name);
+
+                    // Retrieve actual file metadata
+                    if(stat(fullPath, &fileStat) != 0)
+                        {
+                          cout << "\nError: Cannot access file!";
+                          cout << "\nCheck the file name and source path.";
+                          cout << endl;
+
+                          continue;
+                        }
+
+                    // Get actual file size in bytes
+                    f.sizeBytes = fileStat.st_size;
+
+                    // Calculate age using last-modified time
+                    time_t currentTime = time(NULL);
+
+                    double seconds =
+                    difftime(currentTime, fileStat.st_mtime);
+
+                    f.ageDays = (int)(seconds / 86400);
+
+                    cout << "\nActual file size: "
+                    << f.sizeBytes << " bytes";
+
+                    cout << "\nFile age: "
+                    << f.ageDays << " days" << endl;
+                    }
+
 
                if(taskChoice==1)
                {
@@ -787,11 +889,83 @@ int main()
                   workflow->addTask(
                      new BackupTask(f,backupPath));
                }
-               else if(taskChoice==5)
-               {
-                  workflow->addTask(
-                     new VerifyTask(f));
-               }
+               else if(taskChoice == 5)
+                {
+                    workflow->addTask(new VerifyTask(f));
+                }
+               
+              else if(taskChoice == 6)
+                {
+                  if(sortEngine == NULL)
+                      {
+                         sortEngine = new SmartSortEngine();
+
+                        int numberOfRules;
+                        int ruleType;
+                        int i;
+                        long minSize;
+                        int minAge;
+                        char extension[10];
+                        char destination[128];
+
+                        cout << "\nHow many rules (1-10)? ";
+                        cin >> numberOfRules;
+
+                        if(numberOfRules < 1 || numberOfRules > 10)
+                            {
+                              cout << "\nInvalid number of rules!";
+                             delete sortEngine;
+                             sortEngine = NULL;
+                            continue;
+                            }
+
+    for(i = 0; i < numberOfRules; i++)
+      {
+            cout << "\n1. File Type Rule";
+            cout << "\n2. File Size Rule";
+            cout << "\n3. File Age Rule";
+            cout << "\nEnter rule type: ";
+            cin >> ruleType;
+
+            cout << "Enter destination folder (end with \\): ";
+            cin >> destination;
+
+            if(ruleType == 1)
+            {
+                cout << "Enter extension without dot: ";
+                cin >> extension;
+
+                sortEngine->addRule(
+                    new FileTypeRule(extension, destination));
+            }
+            else if(ruleType == 2)
+            {
+                cout << "Enter minimum size in bytes: ";
+                cin >> minSize;
+
+                sortEngine->addRule(
+                    new SizeRule(minSize, destination));
+            }
+            else if(ruleType == 3)
+            {
+                cout << "Enter minimum age in days: ";
+                cin >> minAge;
+
+                sortEngine->addRule(
+                    new AgeRule(minAge, destination));
+            }
+            else
+            {
+                cout << "Invalid rule type!";
+                i--;
+            }
+        }
+        }
+
+    workflow->addTask(
+        new SmartSortTask(f, sortEngine));
+}
+
 
             }while(taskChoice!=0);
 
@@ -847,8 +1021,11 @@ int main()
 
    }while(choice!=6);
 
-   delete workflow;
-   workflow=NULL;
+    delete workflow;
+    workflow = NULL;
+
+    delete sortEngine;
+    sortEngine = NULL;
 
    getch();
    return 0;
