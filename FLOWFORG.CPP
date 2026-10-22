@@ -108,6 +108,30 @@ public:
              << destinationFolder << endl;
     }
 };
+
+class ResilienceEngine
+{
+public:
+    ErrorType detectError(FileInfo file)
+    {
+        char path[256];
+
+        // Check source folder
+        if (access(file.sourcePath, 0) != 0)
+            return ERR_FOLDER_NOT_FOUND;
+
+        // Create complete file path
+        strcpy(path, file.sourcePath);
+        strcat(path, file.name);
+
+        // Check source file
+        if (access(path, 0) != 0)
+            return ERR_FILE_NOT_FOUND;
+
+        return ERR_UNKNOWN;
+    }
+};
+
 //Logger-saves exection history of workflows for user record
 class Logger
 {
