@@ -223,6 +223,25 @@ public:
       return FAILURE;
 
     }
+    TaskResult handle(FileInfo file)
+{
+    ErrorType error = detectError(file);
+
+    switch (error)
+    {
+        case ERR_FOLDER_NOT_FOUND:
+            cout << "Error: Source folder not found." << endl;
+            return FAILURE;
+
+        case ERR_FILE_NOT_FOUND:
+            cout << "Error: Source file not found." << endl;
+            return FAILURE;
+
+        default:
+            cout << "File and folder are present." << endl;
+            return SUCCESS;
+    }
+}
 };
 //Logger-saves exection history of workflows for user record
 class Logger
