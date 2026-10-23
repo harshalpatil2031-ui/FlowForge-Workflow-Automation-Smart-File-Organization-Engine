@@ -104,7 +104,9 @@ FlowForge/
 - [X] Implemented `FileTypeRule::matches()` (matching file extensions via `strcmp`)
 - [X] Implemented `SizeRule::matches()` (matching files by byte size threshold)
 - [X] Implemented `AgeRule::matches()` (matching files by age in days)
-
+- [X] Implement `ResilienceEngine::detectError()` (identifying missing folders/files)
+- [X] Implement `ResilienceEngine::autoFix()` (auto-creating missing destination folders)
+- [X] Implement `ResilienceEngine::retryTask()` (retry attempts up to `maxRetries`)
 ---
 
 ## 📋 Open Task Checklist
@@ -115,9 +117,6 @@ Collaborators can pick any open task below to implement:
 -Implementation Complete
 
 ### 🛡️ Resilience Engine
-- [ ] Implement `ResilienceEngine::detectError()` (identifying missing folders/files)
-- [ ] Implement `ResilienceEngine::autoFix()` (auto-creating missing destination folders)
-- [ ] Implement `ResilienceEngine::retryTask()` (retry attempts up to `maxRetries`)
 - [ ] Implement `ResilienceEngine::handle()` (top-level recovery dispatcher)
 
 ### 💻 UI & Interactive Menu Integration
