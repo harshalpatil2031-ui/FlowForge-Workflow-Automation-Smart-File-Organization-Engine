@@ -188,6 +188,41 @@ public:
         // No missing folder or file detected
         return ERR_UNKNOWN;
     }
+    int autoFix(FileInfo f,ErrorType error)
+    {
+      if(error==ERR_FOLDER_NOT_FOUND)
+      {
+         if(mkdir(f.sourcePath)==0)
+         {
+          cout<<"\n[AutoFix] Created Missing Folder:"<<f.sourcePath<<endl;
+          return 1;
+         }
+         else
+         {
+          cout<<"[AutoFix] Could Not create Folder:"<<f.sourcePath<<endl;
+          return 0;
+         }
+      }
+    }
+    TaskResult retry(Task *task,int Maxattempts)
+    {
+      int attempt;
+      for(attempt=1;attempt<=Maxattempts;attempt++)
+      {
+        cout<<"\n[Retry]Attempt "<<attempt<<"of"<<Maxattempts<<endl;
+        TaskResult result=task->execute();
+        if(result==SUCCESS)
+        {
+          cout<<"[Retry]Succeded on attempt"<<attempt<<endl;
+          return SUCCESS;
+        }
+        cout<<"[Retry] Attempt"<<attempt<<"failed"<<endl;
+
+      }
+      cout << "[Retry] All"<<Maxattempts<<"attempts failed."<<endl;
+      return FAILURE;
+
+    }
 };
 //Logger-saves exection history of workflows for user record
 class Logger
@@ -705,7 +740,10 @@ public:
        cout<<"\nStep"<<i+1<<":";
        taskList[i]->describe();
        logger.log(taskList[i]->getTaskName()); //log that we are starting this task
-       TaskResult result=taskList[i]->execute();
+        
+      try
+      {
+        TaskResult result=taskList[i]->execute();
        if(result==SUCCESS)
        {
 	 cout<<"SUCCESS"<<endl;
@@ -722,6 +760,11 @@ public:
 	  cout<<"SKIPPED"<<endl;
 	  logger.log("SKIPPED");
        }
+     }
+     catch(...)
+     {
+      cout<<"\n[EXCEPTION] Task crashed unexpectedly!"<<endl;
+      logger.log("EXCEPTION - task crashed");
      }
       cout<<"\n----------------------------"<<endl;
       cout<<"Workflow  complete"<<workflowName<<endl;
@@ -753,6 +796,10 @@ int main()
   WorkFlowManager *workflow = NULL;
   SmartSortEngine *sortEngine = NULL;
   Logger sysLogger("FLOW.LOG");
+  try
+  {
+   
+  
   
   do
    {
@@ -1048,6 +1095,12 @@ int main()
 
     delete sortEngine;
     sortEngine = NULL;
+  }
+  catch(...)
+{
+  cout<<"\n[EXCEPTION] An unexpected error occurred!"<<endl;
+  cout<<"Program will now exit safely."<<endl;
+}
 
    getch();
    return 0;
