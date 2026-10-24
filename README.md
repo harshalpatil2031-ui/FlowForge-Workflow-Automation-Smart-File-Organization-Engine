@@ -28,6 +28,12 @@ $$\text{FlowForge} = \text{Workflow Automation} + \text{SmartSort} + \text{Resil
 - **SmartSort Engine**: Rule-based automatic file classification by extension, size, or creation age.
 - **Resilience Engine**: Intelligent error detection and automated self-recovery.
 
+## 🧰 Workflow Management
+
+The main menu supports up to 10 workflows during one program run. Create multiple workflows, select one to view or execute again, and delete workflows you no longer need. Workflows are kept in memory for the current run and are not restored after the program exits.
+
+When selecting a folder, choose a previously saved path, extend a saved path with a subfolder (for example, `CourseProject`), or enter a completely new path. New and extended paths are saved in `PATHS.DAT` for later runs. Enter file names and extensions separately; for example, use `hello` as the name and `txt` as the extension for `hello.txt`.
+
 ---
 
 ## 🏗️ System Architecture
@@ -67,7 +73,7 @@ $$\text{FlowForge} = \text{Workflow Automation} + \text{SmartSort} + \text{Resil
 | :--- | :--- |
 | **Abstraction** | Pure virtual methods `Task::execute() = 0`, `Task::describe() = 0`, and `Rule::matches() = 0` hide implementation details behind clean interfaces. |
 | **Inheritance** | Derived task hierarchy (`RenameTask`, `MoveTask`, `CreateFolderTask`, `BackupTask`, `VerifyTask`, `SmartSortTask`) and rule hierarchy (`FileTypeRule`, `SizeRule`, `AgeRule`). |
-| **Polymorphism** | `Task* taskList[20]` heterogeneous pointer array in `WorkflowManager` executing polymorphic tasks dynamically at runtime. |
+| **Polymorphism** | `Task* taskList[20]` heterogeneous pointer array in each `WorkflowManager` executing polymorphic tasks dynamically at runtime. |
 | **Encapsulation** | Protected data attributes (`taskName`, `file`, `destinationFolder`) accessed strictly via public accessor functions. |
 | **File Handling** | Audit trail written to `FLOW.LOG` using C file streams (`fopen`, `fprintf`, `fgets`, `fclose`). |
 
@@ -120,10 +126,10 @@ Collaborators can pick any open task below to implement:
 - [ ] Implement `ResilienceEngine::handle()` (top-level recovery dispatcher)
 
 ### 💻 UI & Interactive Menu Integration
-- [ ] Wire interactive workflow creation in `main()` menu (Option 1)
-- [ ] Wire interactive task viewing in `main()` menu (Option 2)
-- [ ] Wire execution trigger in `main()` menu (Option 3)
-- [ ] Wire log viewer in `main()` menu (Option 4 & 5)
+- [x] Create and manage multiple workflows from the main menu (Options 1–3 and 6)
+- [x] View workflow tasks and execute a selected workflow again
+- [x] View and clear execution logs (Options 4 and 5)
+- [x] Select saved folder paths, extend them, or add a new path
 
 ---
 
@@ -132,7 +138,7 @@ Collaborators can pick any open task below to implement:
 1. Open **Turbo C++ (Borland IDE)**.
 2. Go to **File ➔ Open** and select `FLOWFORG.CPP`.
 3. Press **Ctrl + F9** to compile and run.
-4. Navigate the interactive menu using numerical choices.
+4. Use the main menu to create workflows, select saved workflows to view or execute, delete workflows, and manage execution logs. Workflows last for the current program run; saved folder paths remain available in `PATHS.DAT`.
 
 > [!TIP]
 > Ensure path separators use `\\` when specifying destination folders in DOS mode.
