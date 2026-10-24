@@ -180,6 +180,8 @@ public:
         // Build the complete file path
         strcpy(path, file.sourcePath);
         strcat(path, file.name);
+        strcat(path, ".");
+        strcat(path, file.extension);
 
         // Check whether the file exists
         if (access(path, 0) != 0)
@@ -329,9 +331,13 @@ class RenameTask:public Task
    char srcFull[256],destFull[256];
    strcpy(srcFull,file.sourcePath);
    strcat(srcFull,file.name);
+   strcat(srcFull,".");
+   strcat(srcFull,file.extension);
 
    strcpy(destFull,file.sourcePath);
    strcat(destFull,newname);
+   strcat(destFull,".");
+   strcat(destFull,file.extension);
 
    if (rename(srcFull,destFull)==0)
    {
@@ -342,6 +348,9 @@ class RenameTask:public Task
    else
    {
       cout<<"\nRename Failed";
+      cout<<"\nSource file: "<<srcFull;
+      cout<<"\nDestination: "<<destFull;
+      perror("\nrename");
       return FAILURE;
    }
   }
@@ -422,9 +431,13 @@ class MoveTask : public Task
       
       strcpy(srcFull, file.sourcePath);
       strcat(srcFull, file.name);
+      strcat(srcFull, ".");
+      strcat(srcFull, file.extension);
 
       strcpy(destFull, targetFolder);
       strcat(destFull, file.name);
+      strcat(destFull, ".");
+      strcat(destFull, file.extension);
 
       // move operation
       if (rename(srcFull, destFull) == 0)
@@ -474,10 +487,14 @@ public:
         // Create complete source file path
         strcpy(sourceFilePath, file.sourcePath);
         strcat(sourceFilePath, file.name);
+        strcat(sourceFilePath, ".");
+        strcat(sourceFilePath, file.extension);
 
         // Create complete backup file path
         strcpy(backupFilePath, backupPath);
         strcat(backupFilePath, file.name);
+        strcat(backupFilePath, ".");
+        strcat(backupFilePath, file.extension);
 
         // Open original file for binary reading
         FILE *sourceFile = fopen(sourceFilePath, "rb");
@@ -542,6 +559,8 @@ public:
         // Create the complete file path
         strcpy(fullPath, file.sourcePath);
         strcat(fullPath, file.name);
+        strcat(fullPath, ".");
+        strcat(fullPath, file.extension);
 
         // Open the file for reading
         FILE *fp = fopen(fullPath, "rb");
@@ -693,9 +712,13 @@ class SmartSortTask : public Task
 
         strcpy(sourcefile,file.sourcePath);
         strcat(sourcefile,file.name);
+        strcat(sourcefile,".");
+        strcat(sourcefile,file.extension);
 
         strcpy(destinationfile,destination);
         strcat(destinationfile,file.name);
+        strcat(destinationfile,".");
+        strcat(destinationfile,file.extension);
 
         if (rename(sourcefile,destinationfile) == 0)
         {
@@ -760,8 +783,6 @@ public:
        taskList[i]->describe();
        logger.log(taskList[i]->getTaskName()); //log that we are starting this task
         
-      try
-      {
         TaskResult result=taskList[i]->execute();
        if(result==SUCCESS)
        {
@@ -772,20 +793,14 @@ public:
        {
 	  cout<<"FAILED"<<endl;
 	  logger.log("FAILURE");
-	  //call resilience engine
        }
        else if(result==SKIPPED)
        {
 	  cout<<"SKIPPED"<<endl;
 	  logger.log("SKIPPED");
        }
-     }
-     catch(...)
-     {
-      cout<<"\n[EXCEPTION] Task crashed unexpectedly!"<<endl;
-      logger.log("EXCEPTION - task crashed");
-     }
       cout<<"\n----------------------------"<<endl;
+      }
       cout<<"Workflow  complete"<<workflowName<<endl;
       logger.log("Workflow Complete");
     }
@@ -807,16 +822,202 @@ public:
     }
 };
 
+int selectWorkflow(WorkFlowManager* workflows[], int workflowCount)
+{
+   int i, selection;
+
+   if(workflowCount == 0)
+   {
+      cout << "\nNo workflows have been created yet." << endl;
+      return -1;
+   }
+
+   cout << "\n--- Workflows ---";
+   for(i = 0; i < workflowCount; i++)
+      cout << "\n" << i + 1 << ". " << workflows[i]->getName();
+
+   cout << "\nSelect workflow (0 to cancel): ";
+   cin >> selection;
+
+   if(selection < 1 || selection > workflowCount)
+      return -1;
+
+   return selection - 1;
+}
+
+// PathManager - saves and loads user folder paths from PATHS.DAT
+// User picks a path by number or adds a new one — no typing needed again
+class PathManager
+{
+private:
+    char paths[10][128]; // up to 10 saved paths
+    int count;           // how many paths saved so far
+
+public:
+    // Constructor - loads saved paths from PATHS.DAT on startup
+    PathManager()
+    {
+        count = 0;
+        load();
+    }
+
+    // load - reads saved paths from PATHS.DAT into array
+    void load()
+    {
+        int len;
+        char buf[128];
+        FILE* f = fopen("PATHS.DAT", "r");
+        if(f == NULL) return;
+        while(count < 10)
+        {
+            if(fgets(buf, 128, f) == NULL) break;
+            strcpy(paths[count], buf);
+            // remove newline at end
+            len = strlen(paths[count]);
+            if(len > 0 && paths[count][len-1] == '\n')
+                paths[count][len-1] = '\0';
+            count++;
+        }
+        fclose(f);
+    }
+
+    // save - writes all paths back to PATHS.DAT
+    void save()
+    {
+        int i;
+        FILE* f = fopen("PATHS.DAT", "w");
+        if(f == NULL) return;
+        for(i = 0; i < count; i++)
+            fprintf(f, "%s\n", paths[i]);
+        fclose(f);
+    }
+
+    // addPath - adds a new path to the list and saves immediately
+    void addPath(char* p)
+    {
+        if(count < 10)
+        {
+            strcpy(paths[count], p);
+            count++;
+            save();
+            cout << "\nPath saved for future use!" << endl;
+        }
+        else
+        {
+            cout << "\nPath list full! Max 10 paths." << endl;
+        }
+    }
+
+    // selectPath - shows saved paths, user picks one or adds new
+
+void selectPath(char* result)
+{
+    int i, ch, parentChoice, baseLength, childLength;
+    char subPath[128];
+
+    cout << "\n--- Select Folder ---";
+
+    for(i = 0; i < count; i++)
+        cout << "\n" << i + 1 << ". " << paths[i];
+
+    cout << "\n" << count + 1 << ". Extend a saved path";
+    cout << "\n" << count + 2 << ". Enter a completely new path";
+    cout << "\nEnter choice: ";
+    cin >> ch;
+
+    if(ch >= 1 && ch <= count)
+    {
+        strcpy(result, paths[ch - 1]);
+    }
+    else if(ch == count + 1)
+    {
+        if(count == 0)
+        {
+            cout << "\nThere are no saved paths to extend." << endl;
+            strcpy(result, ".\\");
+            return;
+        }
+
+        cout << "\nSelect saved path to extend:";
+        for(i = 0; i < count; i++)
+            cout << "\n" << i + 1 << ". " << paths[i];
+        cout << "\nEnter choice: ";
+        cin >> parentChoice;
+
+        if(parentChoice < 1 || parentChoice > count)
+        {
+            cout << "\nInvalid path choice. Using current directory." << endl;
+            strcpy(result, ".\\");
+            return;
+        }
+
+        cout << "\nEnter subfolder path to add (example: CourseProject): ";
+        cin >> subPath;
+
+        strcpy(result, paths[parentChoice - 1]);
+        baseLength = strlen(result);
+        childLength = strlen(subPath);
+        if(baseLength + childLength +
+           (baseLength > 0 && result[baseLength - 1] == '\\' ? 2 : 3) > 128)
+        {
+            cout << "\nCombined path is too long." << endl;
+            strcpy(result, paths[parentChoice - 1]);
+            return;
+        }
+
+        if(baseLength > 0 && result[baseLength - 1] != '\\')
+            strcat(result, "\\");
+        strcat(result, subPath);
+
+        baseLength = strlen(result);
+        if(baseLength == 0 || result[baseLength - 1] != '\\')
+            strcat(result, "\\");
+
+        addPath(result);
+    }
+    else if(ch == count + 2)
+    {
+        cout << "\nEnter complete folder path: ";
+        cin >> result;
+
+        int len = strlen(result);
+
+        // Ensure the path ends with a backslash
+        if(len > 0 && result[len - 1] != '\\')
+        {
+            if(len + 1 >= 128)
+            {
+                cout << "\nPath is too long." << endl;
+                strcpy(result, ".\\");
+                return;
+            }
+            result[len] = '\\';
+            result[len + 1] = '\0';
+        }
+
+        addPath(result);
+    }
+    else
+    {
+        cout << "\nInvalid choice. Using current directory.\n";
+        strcpy(result, ".\\");
+    }
+}
+
+};
+
 int main()
 {
   clrscr();
   int choice;
 
+  WorkFlowManager *workflows[10];
+  int workflowCount = 0;
   WorkFlowManager *workflow = NULL;
   SmartSortEngine *sortEngine = NULL;
   Logger sysLogger("FLOW.LOG");
-  try
-  {
+  PathManager pm; // loads saved paths from PATHS.DAT automatically
+
    
   
   
@@ -832,7 +1033,8 @@ int main()
      cout<<"\n3.Execute Workflow";
      cout<<"\n4.View Execution Log";
      cout<<"\n5.Clear Log";
-     cout<<"\n6.Exit";
+     cout<<"\n6.Delete Workflow";
+     cout<<"\n7.Exit";
      cout<<endl;
      cout<<"\nEnter choice:";
      cin>>choice;
@@ -842,10 +1044,9 @@ int main()
          {
             char name[64];
 
-            if(workflow!=NULL)
+            if(workflowCount >= 10)
             {
-               cout<<"\nWorkflow already exists!";
-               cout<<"\nPlease exit or use the existing workflow first.";
+               cout<<"\nWorkflow list is full! Maximum 10 workflows.";
                getch();
                break;
             }
@@ -854,6 +1055,8 @@ int main()
             cin>>name;
 
             workflow=new WorkFlowManager(name);
+            workflows[workflowCount] = workflow;
+            workflowCount++;
 
             int taskChoice;
 
@@ -889,8 +1092,8 @@ int main()
                cout<<"Enter Extension:";
                cin>>f.extension;
 
-               cout<<"Enter Source Folder Path (end with \\):";
-               cin>>f.sourcePath;
+               cout<<"\nSelect Source Folder:";
+               pm.selectPath(f.sourcePath);
 
                f.sizeBytes=0;
                f.ageDays=0;
@@ -907,6 +1110,10 @@ int main()
                     // Build the complete file path
                     strcpy(fullPath, f.sourcePath);
                     strcat(fullPath, f.name);
+                    strcat(fullPath, ".");
+                    strcat(fullPath, f.extension);
+
+
 
                     // Retrieve actual file metadata
                     if(stat(fullPath, &fileStat) != 0)
@@ -951,8 +1158,8 @@ int main()
                {
                   char folderPath[128];
 
-                  cout<<"Enter Folder Path to Create:";
-                  cin>>folderPath;
+                  cout<<"\nSelect Folder to Create:";
+                  pm.selectPath(folderPath);
 
                   workflow->addTask(
                      new Createfoldertask(f,folderPath));
@@ -961,8 +1168,8 @@ int main()
                {
                   char destFolder[128];
 
-                  cout<<"Enter Destination Folder (end with \\):";
-                  cin>>destFolder;
+                  cout<<"\nSelect Destination Folder:";
+                  pm.selectPath(destFolder);
 
                   workflow->addTask(
                      new MoveTask(f,destFolder));
@@ -971,8 +1178,8 @@ int main()
                {
                   char backupPath[128];
 
-                  cout<<"Enter Backup Folder (end with \\):";
-                  cin>>backupPath;
+                  cout<<"\nSelect Backup Folder:";
+                  pm.selectPath(backupPath);
 
                   workflow->addTask(
                      new BackupTask(f,backupPath));
@@ -1016,7 +1223,7 @@ int main()
             cin >> ruleType;
 
             cout << "Enter destination folder (end with \\): ";
-            cin >> destination;
+            pm.selectPath(destination);
 
             if(ruleType == 1)
             {
@@ -1063,28 +1270,26 @@ int main()
          }
 
          case 2:
-            if(workflow!=NULL)
+         {
+            int selected = selectWorkflow(workflows, workflowCount);
+            if(selected >= 0)
             {
-               workflow->showTasks();
-            }
-            else
-            {
-               cout<<"\nCreate a Workflow First!"<<endl;
+               workflows[selected]->showTasks();
             }
             getch();
             break;
+         }
 
          case 3:
-            if(workflow!=NULL)
+         {
+            int selected = selectWorkflow(workflows, workflowCount);
+            if(selected >= 0)
             {
-               workflow->executeWorkFlow();
-            }
-            else
-            {
-               cout<<"\nCreate a Workflow First!"<<endl;
+               workflows[selected]->executeWorkFlow();
             }
             getch();
             break;
+         }
 
          case 4:
             cout<<"\nView Execution Log"<<endl;
@@ -1099,6 +1304,22 @@ int main()
             break;
 
          case 6:
+         {
+            int selected = selectWorkflow(workflows, workflowCount);
+            if(selected >= 0)
+            {
+               delete workflows[selected];
+               for(int i = selected; i < workflowCount - 1; i++)
+                  workflows[i] = workflows[i + 1];
+               workflowCount--;
+               workflow = NULL;
+               cout << "\nWorkflow deleted." << endl;
+            }
+            getch();
+            break;
+         }
+
+         case 7:
             cout<<"\nGoodbye"<<endl;
             break;
 
@@ -1107,21 +1328,16 @@ int main()
             getch();
       }
 
-   }while(choice!=6);
+   }while(choice!=7);
 
-    delete workflow;
+    for(int i = 0; i < workflowCount; i++)
+       delete workflows[i];
     workflow = NULL;
 
     delete sortEngine;
     sortEngine = NULL;
-  }
-  catch(...)
-{
-  cout<<"\n[EXCEPTION] An unexpected error occurred!"<<endl;
-  cout<<"Program will now exit safely."<<endl;
-}
+
 
    getch();
    return 0;
 }
-
