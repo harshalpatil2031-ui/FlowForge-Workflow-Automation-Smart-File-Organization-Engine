@@ -61,6 +61,10 @@ public:
   {
      return file;   //return file details
   }
+  void setFile(FileInfo f)
+  {
+     file = f;
+  }
   virtual ~Task()
   {
   }
@@ -81,6 +85,10 @@ public:
   const char* getDestination()
   {
     return destinationFolder; //return destination folder for matched files
+  }
+  void setDestination(const char* folder)
+  {
+    strcpy(destinationFolder, folder);
   }
 
   virtual ~Rule() //virtual destructor
@@ -166,6 +174,70 @@ public:
              << destinationFolder << endl;
     }
 };
+
+int samePathIgnoreCase(const char* first, const char* second)
+{
+  char firstPath[256];
+  char secondPath[256];
+  int firstLength;
+  int secondLength;
+  int i;
+
+  strcpy(firstPath, first);
+  strcpy(secondPath, second);
+  for(i=0; firstPath[i] != '\0'; i++)
+    if(firstPath[i] == '/') firstPath[i] = '\\';
+  for(i=0; secondPath[i] != '\0'; i++)
+    if(secondPath[i] == '/') secondPath[i] = '\\';
+
+  firstLength = strlen(firstPath);
+  secondLength = strlen(secondPath);
+  while(firstLength > 1 && firstPath[firstLength - 1] == '\\')
+    firstPath[--firstLength] = '\0';
+  while(secondLength > 1 && secondPath[secondLength - 1] == '\\')
+    secondPath[--secondLength] = '\0';
+
+  return strcmpi(firstPath, secondPath) == 0;
+}
+
+int filesHaveSameContents(const char* first, const char* second)
+{
+  FILE *firstFile;
+  FILE *secondFile;
+  char firstBuffer[512];
+  char secondBuffer[512];
+  size_t firstRead;
+  size_t secondRead;
+  int identical=1;
+
+  firstFile=fopen(first, "rb");
+  secondFile=fopen(second, "rb");
+  if(firstFile == NULL || secondFile == NULL)
+  {
+    if(firstFile != NULL) fclose(firstFile);
+    if(secondFile != NULL) fclose(secondFile);
+    return 0;
+  }
+
+  do
+  {
+    firstRead=fread(firstBuffer, 1, sizeof(firstBuffer), firstFile);
+    secondRead=fread(secondBuffer, 1, sizeof(secondBuffer), secondFile);
+    if(firstRead != secondRead ||
+       memcmp(firstBuffer, secondBuffer, firstRead) != 0)
+    {
+      identical=0;
+      break;
+    }
+  } while(firstRead > 0);
+
+  if(ferror(firstFile) || ferror(secondFile))
+    identical=0;
+  fclose(firstFile);
+  fclose(secondFile);
+  return identical;
+}
+
 class ResilienceEngine
 {
 public:
@@ -339,6 +411,12 @@ class RenameTask:public Task
    strcat(destFull,".");
    strcat(destFull,file.extension);
 
+   if(strcmpi(file.name, newname) == 0)
+   {
+      cout << "\nFile already has the requested name." << endl;
+      return SUCCESS;
+   }
+
    if (rename(srcFull,destFull)==0)
    {
       strcpy(file.name,newname);
@@ -379,19 +457,33 @@ class Createfoldertask:public Task
         cout<<"Create Folder:"<<Folderpath<<endl;
         return SUCCESS;
       }
-      if(access(Folderpath,0)==0)
+      char folderToCreate[128];
+      int pathLength;
+      strcpy(folderToCreate, Folderpath);
+      pathLength = strlen(folderToCreate);
+      while(pathLength > 1 &&
+            (folderToCreate[pathLength - 1] == '\\' ||
+             folderToCreate[pathLength - 1] == '/') &&
+            !(pathLength == 3 && folderToCreate[1] == ':'))
+      {
+         folderToCreate[pathLength - 1] = '\0';
+         pathLength--;
+      }
+
+      if(access(folderToCreate,0)==0)
       {
          cout<<"Folder already exists. Skipping."<<endl;
          return SKIPPED;
       }
-      if(mkdir(Folderpath)==0)
+      if(mkdir(folderToCreate)==0)
       {
-        cout<<"Folder Created Succesfully"<<endl;
+        cout<<"Folder Created Successfully: "<<folderToCreate<<endl;
         return SUCCESS;
       }
       else
       {
-        cout<<"Failed to create folder"<<endl;
+        cout<<"Failed to create folder: "<<folderToCreate<<endl;
+        perror("mkdir");
         return FAILURE;
       }
    }
@@ -439,6 +531,13 @@ class MoveTask : public Task
       strcat(destFull, ".");
       strcat(destFull, file.extension);
 
+      if(samePathIgnoreCase(srcFull, destFull))
+      {
+         strcpy(file.sourcePath, targetFolder);
+         cout << "\nFile is already in the destination folder." << endl;
+         return SUCCESS;
+      }
+
       // move operation
       if (rename(srcFull, destFull) == 0)
       {
@@ -449,7 +548,10 @@ class MoveTask : public Task
       }
       else
       {
-         cout << "\nMove Failed (Check if destination folder exists)" << endl;
+         cout << "\nMove Failed (Check if source file and destination folder exist)";
+         cout << "\nSource file: " << srcFull;
+         cout << "\nDestination file: " << destFull;
+         perror("\nrename");
          return FAILURE;
       }
     }
@@ -635,16 +737,37 @@ class SmartSortEngine
         cout<<"\nRule list full! Max 10 Rules allowed"<<endl;
       }
     }
-    const char* getDestination(FileInfo file)
+    int getMatchingDestinations(FileInfo file, char destinations[10][128])
     {
+      int destinationCount=0;
+      int j;
+      int folderLength;
+      char normalizedFolder[128];
       for(int i=0;i<ruleCount;i++)
       {
         if(ruleList[i]->matches(file)==1)
         {
-          return ruleList[i]->getDestination();
+          strcpy(normalizedFolder, ruleList[i]->getDestination());
+          folderLength = strlen(normalizedFolder);
+          if(folderLength > 0 && normalizedFolder[folderLength - 1] != '\\' &&
+             normalizedFolder[folderLength - 1] != '/' && folderLength < 127)
+          {
+            strcat(normalizedFolder, "\\");
+          }
+
+          for(j=0;j<destinationCount;j++)
+          {
+            if(samePathIgnoreCase(destinations[j], normalizedFolder))
+              break;
+          }
+          if(j == destinationCount)
+          {
+            strcpy(destinations[destinationCount], normalizedFolder);
+            destinationCount++;
+          }
         }
       }
-      return "Unsorted";
+      return destinationCount;
     }
     void showAllRules()
     {
@@ -661,6 +784,17 @@ class SmartSortEngine
       }
       cout<<"------------------"<<endl;
     }
+    int getRuleCount()
+    {
+      return ruleCount;
+    }
+    int updateRuleDestination(int ruleNumber, const char* folder)
+    {
+      if(ruleNumber < 1 || ruleNumber > ruleCount)
+        return 0;
+      ruleList[ruleNumber - 1]->setDestination(folder);
+      return 1;
+    }
     ~SmartSortEngine()
     {
       for(int i=0;i<ruleCount;i++)
@@ -676,61 +810,18 @@ class SmartSortTask : public Task
     SmartSortEngine *engine;
 
   public:
-      SmartSortTask(FileInfo f, SmartSortEngine *sortEngine):Task("SmartSort Task", f)
+      SmartSortTask(FileInfo f, SmartSortEngine *sortEngine)
+                    :Task("SmartSort Task", f)
     {
         engine = sortEngine;
     }
     void describe()
     {
-        cout << "[SmartSort Task]"<<file.name<<"(."<<file.extension<<")"<<endl;
+        cout << "[SmartSort Task] " << file.name << "." << file.extension
+             << " -> destination selected by saved rules" << endl;
     }
 
-  TaskResult execute()
-  {
-        char sourcefile[256];
-        char destination[128];
-        char destinationfile[256];
-
-        if (engine == NULL)
-        {
-          return FAILURE;
-        }
-
-        strcpy(destination, engine->getDestination(file));
-
-        if (strcmp(destination, "Unsorted") == 0)
-        {
-          return SKIPPED;
-        }
-
-        if (file.isVirtual)
-        {
-            strcpy(file.destPath, destination);
-            cout << "[SmartSort]"<<file.name<<"would move to"<<destination<<endl;
-            return SUCCESS;
-        }
-
-        strcpy(sourcefile,file.sourcePath);
-        strcat(sourcefile,file.name);
-        strcat(sourcefile,".");
-        strcat(sourcefile,file.extension);
-
-        strcpy(destinationfile,destination);
-        strcat(destinationfile,file.name);
-        strcat(destinationfile,".");
-        strcat(destinationfile,file.extension);
-
-        if (rename(sourcefile,destinationfile) == 0)
-        {
-            strcpy(file.destPath,destination);
-            strcpy(file.sourcePath,destination);
-            cout<<"[SmartSort] Moved"<<file.name<<"to"<<destination<<endl;
-            return SUCCESS;
-        }
-
-        cout<<"[SmartSort] Could not move "<<file.name<<endl;
-        return FAILURE;
-    }
+    TaskResult execute();
 };
 class WorkFlowManager
 {
@@ -738,13 +829,21 @@ private:
    char workflowName[64];
    Task* taskList[20]; //array of Task Pointers
    int taskCount;
+   SmartSortEngine *smartSortEngine;
    Logger logger; //logs records
 public:
    WorkFlowManager(const char* name) : logger("FLOW.LOG")
    {
        strcpy(workflowName,name);
        taskCount=0;
+       smartSortEngine=NULL;
    }
+    SmartSortEngine* getSmartSortEngine()
+    {
+       if(smartSortEngine == NULL)
+          smartSortEngine = new SmartSortEngine();
+       return smartSortEngine;
+    }
    void addTask(Task* task)
    {
     if(taskCount<20)
@@ -775,10 +874,27 @@ public:
    }
    void executeWorkFlow()
    {
+     FileInfo currentFile;
+     int hasFile=0;
+     int i;
+
+     for(i=0;i<taskCount;i++)
+     {
+       currentFile=taskList[i]->getfile();
+       if(currentFile.name[0] != '\0')
+       {
+         hasFile=1;
+         break;
+       }
+     }
+
      cout<<"\nStarting WorkFlow:"<<workflowName<<endl;
      cout<<"------------------"<<endl;
-     for(int i=0;i<taskCount;i++)
+     for(i=0;i<taskCount;i++)
      {
+       if(hasFile)
+         taskList[i]->setFile(currentFile);
+
        cout<<"\nStep"<<i+1<<":";
        taskList[i]->describe();
        logger.log(taskList[i]->getTaskName()); //log that we are starting this task
@@ -786,6 +902,8 @@ public:
         TaskResult result=taskList[i]->execute();
        if(result==SUCCESS)
        {
+	 if(hasFile)
+	   currentFile=taskList[i]->getfile();
 	 cout<<"SUCCESS"<<endl;
 	 logger.log("SUCCESS");
        }
@@ -800,6 +918,11 @@ public:
 	  logger.log("SKIPPED");
        }
       cout<<"\n----------------------------"<<endl;
+      }
+      if(hasFile)
+      {
+        for(i=0;i<taskCount;i++)
+          taskList[i]->setFile(currentFile);
       }
       cout<<"Workflow  complete"<<workflowName<<endl;
       logger.log("Workflow Complete");
@@ -819,6 +942,7 @@ public:
        {
 	 delete taskList[i];
        }
+       delete smartSortEngine;
     }
 };
 
@@ -1006,6 +1130,159 @@ void selectPath(char* result)
 
 };
 
+TaskResult SmartSortTask::execute()
+{
+    char fullPath[256];
+    char destinations[10][128];
+    char destinationFiles[10][256];
+    struct stat fileStat;
+    time_t currentTime;
+    double seconds;
+    int destinationCount;
+    int i;
+    int destinationLength;
+    int sourceIsDestination=0;
+    int copyFailed=0;
+    FILE *input;
+    FILE *output;
+    char buffer[512];
+    size_t bytesRead;
+
+    if(engine == NULL)
+        return FAILURE;
+
+    strcpy(fullPath, file.sourcePath);
+    strcat(fullPath, file.name);
+    strcat(fullPath, ".");
+    strcat(fullPath, file.extension);
+
+    if(stat(fullPath, &fileStat) != 0)
+    {
+        cout << "\nError: Cannot access file: " << fullPath << endl;
+        return FAILURE;
+    }
+
+    file.sizeBytes = fileStat.st_size;
+    currentTime = time(NULL);
+    seconds = difftime(currentTime, fileStat.st_mtime);
+    file.ageDays = (int)(seconds / 86400);
+
+    cout << "\nActual file size: " << file.sizeBytes << " bytes";
+    cout << "\nFile age: " << file.ageDays << " days" << endl;
+
+    destinationCount = engine->getMatchingDestinations(file, destinations);
+    if(destinationCount == 0)
+    {
+        cout << "\nNo SmartSort rule matched this file." << endl;
+        return SKIPPED;
+    }
+
+    // A file may match several rules. Copy it to each unique destination,
+    // then remove the source only after all destination copies succeed.
+    for(i=0;i<destinationCount;i++)
+    {
+        strcpy(destinationFiles[i], destinations[i]);
+        destinationLength = strlen(destinationFiles[i]);
+        if(destinationLength > 0 && destinationFiles[i][destinationLength - 1] != '\\' &&
+           destinationFiles[i][destinationLength - 1] != '/')
+            strcat(destinationFiles[i], "\\");
+        strcat(destinationFiles[i], file.name);
+        strcat(destinationFiles[i], ".");
+        strcat(destinationFiles[i], file.extension);
+
+        if(samePathIgnoreCase(fullPath, destinationFiles[i]))
+        {
+            sourceIsDestination=1;
+            continue;
+        }
+
+        if(access(destinationFiles[i], 0) == 0)
+        {
+            if(filesHaveSameContents(fullPath, destinationFiles[i]))
+                continue;
+            cout << "\n[SmartSort] Destination file already exists with different contents: "
+                 << destinationFiles[i] << endl;
+            copyFailed=1;
+            break;
+        }
+
+        input=fopen(fullPath, "rb");
+        if(input == NULL)
+        {
+            cout << "\n[SmartSort] Could not open source file: " << fullPath << endl;
+            copyFailed=1;
+            break;
+        }
+
+        output=fopen(destinationFiles[i], "wb");
+        if(output == NULL)
+        {
+            fclose(input);
+            cout << "\n[SmartSort] Could not create destination file: "
+                 << destinationFiles[i] << endl;
+            perror("fopen");
+            copyFailed=1;
+            break;
+        }
+
+        while((bytesRead=fread(buffer, 1, sizeof(buffer), input)) > 0)
+        {
+            if(fwrite(buffer, 1, bytesRead, output) != bytesRead)
+            {
+                copyFailed=1;
+                break;
+            }
+        }
+        if(ferror(input))
+            copyFailed=1;
+        if(ferror(output))
+            copyFailed=1;
+
+        fclose(input);
+        fclose(output);
+
+        if(copyFailed)
+        {
+            remove(destinationFiles[i]);
+            cout << "\n[SmartSort] Failed while copying to "
+                 << destinations[i] << endl;
+            break;
+        }
+    }
+
+    if(copyFailed)
+    {
+        // Remove copies created during this attempt so the source remains intact.
+        while(i > 0)
+        {
+            i--;
+            if(!samePathIgnoreCase(fullPath, destinationFiles[i]) &&
+               access(destinationFiles[i], 0) == 0)
+                remove(destinationFiles[i]);
+        }
+        return FAILURE;
+    }
+
+    if(!sourceIsDestination && remove(fullPath) != 0)
+    {
+        cout << "\n[SmartSort] Copies were made, but the source could not be removed: "
+             << fullPath << endl;
+        perror("remove");
+        return FAILURE;
+    }
+
+    for(i=0;i<destinationCount;i++)
+        cout << "[SmartSort] Routed " << file.name << "." << file.extension
+             << " to folder " << destinations[i] << endl;
+
+    if(destinationCount > 0)
+    {
+        strcpy(file.destPath, destinations[0]);
+        strcpy(file.sourcePath, destinations[0]);
+    }
+    return SUCCESS;
+}
+
 int main()
 {
   clrscr();
@@ -1014,7 +1291,6 @@ int main()
   WorkFlowManager *workflows[10];
   int workflowCount = 0;
   WorkFlowManager *workflow = NULL;
-  SmartSortEngine *sortEngine = NULL;
   Logger sysLogger("FLOW.LOG");
   PathManager pm; // loads saved paths from PATHS.DAT automatically
 
@@ -1034,7 +1310,8 @@ int main()
      cout<<"\n4.View Execution Log";
      cout<<"\n5.Clear Log";
      cout<<"\n6.Delete Workflow";
-     cout<<"\n7.Exit";
+     cout<<"\n7.Change SmartSort Rule Destination";
+     cout<<"\n8.Exit";
      cout<<endl;
      cout<<"\nEnter choice:";
      cin>>choice;
@@ -1059,6 +1336,15 @@ int main()
             workflowCount++;
 
             int taskChoice;
+            FileInfo workflowFile;
+            int workflowFileSet=0;
+            workflowFile.name[0]='\0';
+            workflowFile.extension[0]='\0';
+            workflowFile.sourcePath[0]='\0';
+            workflowFile.destPath[0]='\0';
+            workflowFile.sizeBytes=0;
+            workflowFile.ageDays=0;
+            workflowFile.isVirtual=0;
 
             do
             {
@@ -1068,7 +1354,8 @@ int main()
                cout<<"\n3.Move File";
                cout<<"\n4.Backup File";
                cout<<"\n5.Verify File";
-               cout<<"\n6.Smart Sort File";
+               cout<<"\n6.Add SmartSort Rules and Destinations";
+               cout<<"\n7.Add File to SmartSort";
                cout<<"\n0.Finish Adding Tasks";
                cout<<"\nEnter choice:";
                cin>>taskChoice;
@@ -1078,71 +1365,59 @@ int main()
                   break;
                }
 
-               if(taskChoice < 1 || taskChoice > 6)
+               if(taskChoice < 1 || taskChoice > 7)
                {
                   cout<<"\nInvalid Task Choice!";
                   continue;
                }
 
                FileInfo f;
+               if(workflowFileSet)
+               {
+                  f=workflowFile;
+               }
+               else
+               {
+                  f.name[0]='\0';
+                  f.extension[0]='\0';
+                  f.sourcePath[0]='\0';
+                  f.destPath[0]='\0';
+                  f.sizeBytes=0;
+                  f.ageDays=0;
+                  f.isVirtual=0;
+               }
 
-               cout<<"\nEnter File Name:";
-               cin>>f.name;
+               if(taskChoice == 7 &&
+                  workflow->getSmartSortEngine()->getRuleCount() == 0)
+               {
+                  cout << "\nConfigure SmartSort rules first using option 6." << endl;
+                  continue;
+               }
 
-               cout<<"Enter Extension:";
-               cin>>f.extension;
+               // Folder creation and SmartSort rule configuration do not need a file.
+               if(taskChoice != 2 && taskChoice != 6)
+               {
+                  if(!workflowFileSet)
+                  {
+                     cout<<"\nEnter File Name:";
+                     cin>>f.name;
 
-               cout<<"\nSelect Source Folder:";
-               pm.selectPath(f.sourcePath);
+                     cout<<"Enter Extension:";
+                     cin>>f.extension;
 
-               f.sizeBytes=0;
-               f.ageDays=0;
-               f.isVirtual=0;
-               f.destPath[0]='\0';
-               
-               // Automatically retrieve file size and last-modified time.
-               
-              if(taskChoice == 6)
-                    {
-                      char fullPath[256];
-                      struct stat fileStat;
+                     cout<<"\nSelect Source Folder:";
+                     pm.selectPath(f.sourcePath);
 
-                    // Build the complete file path
-                    strcpy(fullPath, f.sourcePath);
-                    strcat(fullPath, f.name);
-                    strcat(fullPath, ".");
-                    strcat(fullPath, f.extension);
-
-
-
-                    // Retrieve actual file metadata
-                    if(stat(fullPath, &fileStat) != 0)
-                        {
-                          cout << "\nError: Cannot access file!";
-                          cout << "\nCheck the file name and source path.";
-                          cout << endl;
-
-                          continue;
-                        }
-
-                    // Get actual file size in bytes
-                    f.sizeBytes = fileStat.st_size;
-
-                    // Calculate age using last-modified time
-                    time_t currentTime = time(NULL);
-
-                    double seconds =
-                    difftime(currentTime, fileStat.st_mtime);
-
-                    f.ageDays = (int)(seconds / 86400);
-
-                    cout << "\nActual file size: "
-                    << f.sizeBytes << " bytes";
-
-                    cout << "\nFile age: "
-                    << f.ageDays << " days" << endl;
-                    }
-
+                     workflowFile=f;
+                     workflowFileSet=1;
+                  }
+                  else
+                  {
+                     f=workflowFile;
+                     cout<<"\nUsing workflow file: "<<f.name<<"."
+                         <<f.extension<<" from "<<f.sourcePath<<endl;
+                  }
+               }
 
                if(taskChoice==1)
                {
@@ -1156,10 +1431,35 @@ int main()
                }
                else if(taskChoice==2)
                {
+                  char parentFolder[128];
                   char folderPath[128];
+                  char folderName[64];
+                  int parentLength;
 
-                  cout<<"\nSelect Folder to Create:";
-                  pm.selectPath(folderPath);
+                  cout<<"\nSelect Parent Folder:";
+                  pm.selectPath(parentFolder);
+
+                  cout<<"Enter New Folder Name:";
+                  cin>>folderName;
+
+                  strcpy(folderPath, parentFolder);
+                  parentLength = strlen(folderPath);
+                  if(parentLength > 0 && folderPath[parentLength - 1] != '\\' &&
+                     folderPath[parentLength - 1] != '/')
+                  {
+                     if(parentLength + strlen(folderName) + 2 > 128)
+                     {
+                        cout<<"\nCombined folder path is too long."<<endl;
+                        continue;
+                     }
+                     strcat(folderPath, "\\");
+                  }
+                  else if(parentLength + strlen(folderName) + 1 > 128)
+                  {
+                     cout<<"\nCombined folder path is too long."<<endl;
+                     continue;
+                  }
+                  strcat(folderPath, folderName);
 
                   workflow->addTask(
                      new Createfoldertask(f,folderPath));
@@ -1191,11 +1491,10 @@ int main()
                
               else if(taskChoice == 6)
                 {
-                  if(sortEngine == NULL)
-                      {
-                         sortEngine = new SmartSortEngine();
+                         SmartSortEngine *taskSortEngine = workflow->getSmartSortEngine();
 
                         int numberOfRules;
+                        int availableRules;
                         int ruleType;
                         int i;
                         long minSize;
@@ -1203,14 +1502,23 @@ int main()
                         char extension[10];
                         char destination[128];
 
-                        cout << "\nHow many rules (1-10)? ";
+                        availableRules = 10 - taskSortEngine->getRuleCount();
+                        if(availableRules <= 0)
+                        {
+                            cout << "\nSmartSort already has the maximum of 10 rules." << endl;
+                            taskSortEngine->showAllRules();
+                        }
+                        else
+                        {
+                        cout << "\nCurrently configured rules:" << endl;
+                        taskSortEngine->showAllRules();
+                        cout << "How many additional SmartSort rules (1-"
+                             << availableRules << ")? ";
                         cin >> numberOfRules;
 
-                        if(numberOfRules < 1 || numberOfRules > 10)
+                        if(numberOfRules < 1 || numberOfRules > availableRules)
                             {
-                              cout << "\nInvalid number of rules!";
-                             delete sortEngine;
-                             sortEngine = NULL;
+                              cout << "\nInvalid number of additional rules!";
                             continue;
                             }
 
@@ -1222,15 +1530,15 @@ int main()
             cout << "\nEnter rule type: ";
             cin >> ruleType;
 
-            cout << "Enter destination folder (end with \\): ";
-            pm.selectPath(destination);
-
             if(ruleType == 1)
             {
                 cout << "Enter extension without dot: ";
                 cin >> extension;
 
-                sortEngine->addRule(
+                cout << "Select destination folder for ." << extension << " files:";
+                pm.selectPath(destination);
+
+                taskSortEngine->addRule(
                     new FileTypeRule(extension, destination));
             }
             else if(ruleType == 2)
@@ -1238,7 +1546,11 @@ int main()
                 cout << "Enter minimum size in bytes: ";
                 cin >> minSize;
 
-                sortEngine->addRule(
+                cout << "Select destination folder for files >= "
+                     << minSize << " bytes:";
+                pm.selectPath(destination);
+
+                taskSortEngine->addRule(
                     new SizeRule(minSize, destination));
             }
             else if(ruleType == 3)
@@ -1246,7 +1558,11 @@ int main()
                 cout << "Enter minimum age in days: ";
                 cin >> minAge;
 
-                sortEngine->addRule(
+                cout << "Select destination folder for files >= "
+                     << minAge << " days old:";
+                pm.selectPath(destination);
+
+                taskSortEngine->addRule(
                     new AgeRule(minAge, destination));
             }
             else
@@ -1255,10 +1571,13 @@ int main()
                 i--;
             }
         }
-        }
-
-    workflow->addTask(
-        new SmartSortTask(f, sortEngine));
+                        }
+                }
+              else if(taskChoice == 7)
+                {
+                    SmartSortEngine *taskSortEngine = workflow->getSmartSortEngine();
+                    workflow->addTask(
+                        new SmartSortTask(f, taskSortEngine));
 }
 
 
@@ -1320,6 +1639,36 @@ int main()
          }
 
          case 7:
+         {
+            int selected = selectWorkflow(workflows, workflowCount);
+            if(selected >= 0)
+            {
+               SmartSortEngine *engine = workflows[selected]->getSmartSortEngine();
+               if(engine->getRuleCount() == 0)
+               {
+                  cout << "\nThis workflow has no SmartSort rules yet." << endl;
+               }
+               else
+               {
+                  int ruleNumber;
+                  char newDestination[128];
+                  engine->showAllRules();
+                  cout << "Enter rule number to change (0 to cancel): ";
+                  cin >> ruleNumber;
+                  if(ruleNumber > 0 && ruleNumber <= engine->getRuleCount())
+                  {
+                     cout << "Select the new destination folder:";
+                     pm.selectPath(newDestination);
+                     engine->updateRuleDestination(ruleNumber, newDestination);
+                     cout << "\nSmartSort destination updated." << endl;
+                  }
+               }
+            }
+            getch();
+            break;
+         }
+
+         case 8:
             cout<<"\nGoodbye"<<endl;
             break;
 
@@ -1328,15 +1677,11 @@ int main()
             getch();
       }
 
-   }while(choice!=7);
+   }while(choice!=8);
 
     for(int i = 0; i < workflowCount; i++)
        delete workflows[i];
     workflow = NULL;
-
-    delete sortEngine;
-    sortEngine = NULL;
-
 
    getch();
    return 0;
