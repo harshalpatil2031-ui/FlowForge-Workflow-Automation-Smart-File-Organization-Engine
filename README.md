@@ -34,6 +34,10 @@ The main menu supports up to 10 workflows during one program run. Create multipl
 
 When selecting a folder, choose a previously saved path, extend a saved path with a subfolder (for example, `CourseProject`), or enter a completely new path. New and extended paths are saved in `PATHS.DAT` for later runs. Enter file names and extensions separately; for example, use `hello` as the name and `txt` as the extension for `hello.txt`.
 
+The Add Tasks menu separates SmartSort setup from sorting a file. Choose **6. Add SmartSort Rules and Destinations** to add rules (for example, `.txt` files go to one folder); existing rules stay in place, and you can append more later. Then choose **7. Add File to SmartSort** to enter the file name, extension, and source folder for a sorting task. You can add several files using the saved rules. When a file matches multiple rules with different destinations, SmartSort copies it to each unique matching destination and removes the source only after all copies succeed. Use **Change SmartSort Rule Destination** in the main menu to update an existing rule later.
+
+File name, extension, and source folder are entered once per workflow, on the first task that needs a file. Other file tasks in that workflow reuse the same file. Successful rename, move, and SmartSort operations update the file details used by later tasks.
+
 ---
 
 ## 🏗️ System Architecture
@@ -105,7 +109,7 @@ FlowForge/
 - [X] Implemented `BackupTask::execute()` (byte-by-byte binary file copy)
 - [X] Implemented `VerifyTask::execute()` (file existence and non-zero size verification)
 - [X] Implemented `SmartSortTask::execute()` (rule lookup & automatic relocation)
-- [X] Implemented `SmartSortEngine::getDestination()` (scanning active rules)
+- [X] Implemented `SmartSortEngine::getMatchingDestinations()` (scanning all active rules)
 - [X] Implemented `SmartSortEngine::showAllRules()` & rule management
 - [X] Implemented `FileTypeRule::matches()` (matching file extensions via `strcmp`)
 - [X] Implemented `SizeRule::matches()` (matching files by byte size threshold)
