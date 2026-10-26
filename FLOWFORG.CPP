@@ -275,6 +275,56 @@ int filesHaveSameContents(const char* first, const char* second)
   return identical;
 }
 
+int copyFileBytes(const char* sourcePath, const char* destinationPath)
+{
+  FILE *sourceFile;
+  FILE *destinationFile;
+  char buffer[512];
+  size_t bytesRead;
+  int success=1;
+
+  sourceFile=fopen(sourcePath, "rb");
+  if(sourceFile == NULL)
+  {
+    cout << "\nCannot open source file: " << sourcePath << endl;
+    perror("fopen source");
+    return 0;
+  }
+
+  destinationFile=fopen(destinationPath, "wb");
+  if(destinationFile == NULL)
+  {
+    cout << "\nCannot create destination file: " << destinationPath << endl;
+    perror("fopen destination");
+    fclose(sourceFile);
+    return 0;
+  }
+
+  while((bytesRead=fread(buffer, 1, sizeof(buffer), sourceFile)) > 0)
+  {
+    if(fwrite(buffer, 1, bytesRead, destinationFile) != bytesRead)
+    {
+      success=0;
+      break;
+    }
+  }
+  if(ferror(sourceFile) || ferror(destinationFile))
+    success=0;
+
+  if(fclose(sourceFile) != 0)
+    success=0;
+  if(fclose(destinationFile) != 0)
+    success=0;
+
+  if(!success)
+  {
+    cout << "\nFile copy failed; the source file was kept." << endl;
+    remove(destinationPath);
+    return 0;
+  }
+  return 1;
+}
+
 class ResilienceEngine
 {
 public:
@@ -558,22 +608,32 @@ class MoveTask : public Task
          return SUCCESS;
       }
 
-      // move operation
-      if (rename(srcFull, destFull) == 0)
+      if(access(destFull, 0) == 0)
       {
-         // Update the file's current location so subsequent tasks know where it is
-         strcpy(file.sourcePath, targetFolder);
-         cout << "\nMoved Successfully to " << targetFolder << endl;
-         return SUCCESS;
-      }
-      else
-      {
-         cout << "\nMove Failed (Check if source file and destination folder exist)";
-         cout << "\nSource file: " << srcFull;
-         cout << "\nDestination file: " << destFull;
-         perror("\nrename");
+         cout << "\nMove Failed: destination file already exists: "
+              << destFull << endl;
          return FAILURE;
       }
+
+      // Copy then remove the source; this also supports cross-folder moves
+      // in DOS runtimes where rename() only handles same-directory renames.
+      if(!copyFileBytes(srcFull, destFull))
+         return FAILURE;
+
+      if(remove(srcFull) != 0)
+      {
+         cout << "\nMove Failed: could not remove the source after copying.";
+         cout << "\nSource file: " << srcFull;
+         cout << "\nDestination file: " << destFull << endl;
+         perror("remove source");
+         remove(destFull);
+         return FAILURE;
+      }
+
+      // Update the file's current location so subsequent tasks use it.
+      strcpy(file.sourcePath, targetFolder);
+      cout << "\nMoved Successfully to " << targetFolder << endl;
+      return SUCCESS;
     }
 
     ~MoveTask()
