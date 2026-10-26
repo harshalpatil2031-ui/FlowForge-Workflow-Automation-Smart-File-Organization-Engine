@@ -1032,6 +1032,39 @@ public:
         }
     }
 
+    void deleteSavedPath()
+    {
+        int selection;
+        int i;
+
+        if(count == 0)
+        {
+            cout << "\nNo saved paths to delete." << endl;
+            return;
+        }
+
+        cout << "\n--- Saved Paths ---";
+        for(i = 0; i < count; i++)
+            cout << "\n" << i + 1 << ". " << paths[i];
+
+        cout << "\nSelect path to delete (0 to cancel): ";
+        cin >> selection;
+
+        if(selection == 0)
+            return;
+        if(selection < 1 || selection > count)
+        {
+            cout << "\nInvalid path selection." << endl;
+            return;
+        }
+
+        for(i = selection - 1; i < count - 1; i++)
+            strcpy(paths[i], paths[i + 1]);
+        count--;
+        save();
+        cout << "\nSaved path removed. The actual folder was not deleted." << endl;
+    }
+
     // selectPath - shows saved paths, user picks one or adds new
 
 void selectPath(char* result)
@@ -1293,10 +1326,6 @@ int main()
   WorkFlowManager *workflow = NULL;
   Logger sysLogger("FLOW.LOG");
   PathManager pm; // loads saved paths from PATHS.DAT automatically
-
-   
-  
-  
   do
    {
       cout<<"-----------------------------------"<<endl;
@@ -1311,7 +1340,8 @@ int main()
      cout<<"\n5.Clear Log";
      cout<<"\n6.Delete Workflow";
      cout<<"\n7.Change SmartSort Rule Destination";
-     cout<<"\n8.Exit";
+     cout<<"\n8.Delete Saved Folder Path";
+     cout<<"\n9.Exit";
      cout<<endl;
      cout<<"\nEnter choice:";
      cin>>choice;
@@ -1669,6 +1699,11 @@ int main()
          }
 
          case 8:
+            pm.deleteSavedPath();
+            getch();
+            break;
+
+         case 9:
             cout<<"\nGoodbye"<<endl;
             break;
 
@@ -1677,7 +1712,7 @@ int main()
             getch();
       }
 
-   }while(choice!=8);
+   }while(choice!=9);
 
     for(int i = 0; i < workflowCount; i++)
        delete workflows[i];
