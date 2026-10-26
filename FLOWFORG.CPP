@@ -200,6 +200,43 @@ int samePathIgnoreCase(const char* first, const char* second)
   return strcmpi(firstPath, secondPath) == 0;
 }
 
+int normalizeFolderPath(char* path, int capacity)
+{
+  int length=strlen(path);
+  int i;
+
+  while(length > 0 && (path[length - 1] == '\n' || path[length - 1] == '\r'))
+    path[--length]='\0';
+
+  for(i=0;i<length;i++)
+    if(path[i] == '/') path[i]='\\';
+
+  if(length == 0)
+    return 0;
+
+  if(path[length - 1] != '\\')
+  {
+    if(length + 1 >= capacity)
+      return 0;
+    path[length++]='\\';
+    path[length]='\0';
+  }
+  return 1;
+}
+
+void buildFilePath(char* result, const char* folder, const char* name,
+                   const char* extension)
+{
+  int length;
+  strcpy(result, folder);
+  length = strlen(result);
+  if(length > 0 && result[length - 1] != '\\' && result[length - 1] != '/')
+    strcat(result, "\\");
+  strcat(result, name);
+  strcat(result, ".");
+  strcat(result, extension);
+}
+
 int filesHaveSameContents(const char* first, const char* second)
 {
   FILE *firstFile;
@@ -249,11 +286,8 @@ public:
         if (access(file.sourcePath, 0) != 0)
             return ERR_FOLDER_NOT_FOUND;
 
-        // Build the complete file path
-        strcpy(path, file.sourcePath);
-        strcat(path, file.name);
-        strcat(path, ".");
-        strcat(path, file.extension);
+        // Build the complete file path, even if a saved path lacked a slash.
+        buildFilePath(path, file.sourcePath, file.name, file.extension);
 
         // Check whether the file exists
         if (access(path, 0) != 0)
@@ -401,15 +435,8 @@ class RenameTask:public Task
   
    // Build source & destination full paths for real files
    char srcFull[256],destFull[256];
-   strcpy(srcFull,file.sourcePath);
-   strcat(srcFull,file.name);
-   strcat(srcFull,".");
-   strcat(srcFull,file.extension);
-
-   strcpy(destFull,file.sourcePath);
-   strcat(destFull,newname);
-   strcat(destFull,".");
-   strcat(destFull,file.extension);
+   buildFilePath(srcFull, file.sourcePath, file.name, file.extension);
+   buildFilePath(destFull, file.sourcePath, newname, file.extension);
 
    if(strcmpi(file.name, newname) == 0)
    {
@@ -521,15 +548,8 @@ class MoveTask : public Task
       //source & destination full paths 
       char srcFull[256], destFull[256];
       
-      strcpy(srcFull, file.sourcePath);
-      strcat(srcFull, file.name);
-      strcat(srcFull, ".");
-      strcat(srcFull, file.extension);
-
-      strcpy(destFull, targetFolder);
-      strcat(destFull, file.name);
-      strcat(destFull, ".");
-      strcat(destFull, file.extension);
+      buildFilePath(srcFull, file.sourcePath, file.name, file.extension);
+      buildFilePath(destFull, targetFolder, file.name, file.extension);
 
       if(samePathIgnoreCase(srcFull, destFull))
       {
@@ -587,23 +607,20 @@ public:
         char backupFilePath[256];
 
         // Create complete source file path
-        strcpy(sourceFilePath, file.sourcePath);
-        strcat(sourceFilePath, file.name);
-        strcat(sourceFilePath, ".");
-        strcat(sourceFilePath, file.extension);
+        buildFilePath(sourceFilePath, file.sourcePath,
+                      file.name, file.extension);
 
         // Create complete backup file path
-        strcpy(backupFilePath, backupPath);
-        strcat(backupFilePath, file.name);
-        strcat(backupFilePath, ".");
-        strcat(backupFilePath, file.extension);
+        buildFilePath(backupFilePath, backupPath,
+                      file.name, file.extension);
 
         // Open original file for binary reading
         FILE *sourceFile = fopen(sourceFilePath, "rb");
 
         if (sourceFile == NULL)
         {
-            cout << "\nSource file not found." << endl;
+            cout << "\nSource file not found: " << sourceFilePath << endl;
+            perror("fopen source");
             return FAILURE;
         }
 
@@ -612,7 +629,8 @@ public:
 
         if (backupFile == NULL)
         {
-            cout << "\nCannot create backup file." << endl;
+            cout << "\nCannot create backup file: " << backupFilePath << endl;
+            perror("fopen backup");
             fclose(sourceFile);
             return FAILURE;
         }
@@ -659,10 +677,8 @@ public:
         char fullPath[256];
 
         // Create the complete file path
-        strcpy(fullPath, file.sourcePath);
-        strcat(fullPath, file.name);
-        strcat(fullPath, ".");
-        strcat(fullPath, file.extension);
+        buildFilePath(fullPath, file.sourcePath,
+                      file.name, file.extension);
 
         // Open the file for reading
         FILE *fp = fopen(fullPath, "rb");
@@ -670,7 +686,8 @@ public:
         if (fp == NULL)
         {
             cout << "\nVerification Failed: File not found."
-                 << endl;
+                 << " Path: " << fullPath << endl;
+            perror("fopen");
             return FAILURE;
         }
 
@@ -995,36 +1012,66 @@ public:
         while(count < 10)
         {
             if(fgets(buf, 128, f) == NULL) break;
+            len = strlen(buf);
+            while(len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r'))
+                buf[--len] = '\0';
+            if(!normalizeFolderPath(buf, 128))
+                continue;
             strcpy(paths[count], buf);
-            // remove newline at end
-            len = strlen(paths[count]);
-            if(len > 0 && paths[count][len-1] == '\n')
-                paths[count][len-1] = '\0';
             count++;
         }
         fclose(f);
     }
 
     // save - writes all paths back to PATHS.DAT
-    void save()
+    int save()
     {
         int i;
         FILE* f = fopen("PATHS.DAT", "w");
-        if(f == NULL) return;
+        if(f == NULL)
+        {
+            cout << "\nCould not save PATHS.DAT." << endl;
+            perror("PATHS.DAT");
+            return 0;
+        }
         for(i = 0; i < count; i++)
             fprintf(f, "%s\n", paths[i]);
         fclose(f);
+        return 1;
     }
 
     // addPath - adds a new path to the list and saves immediately
     void addPath(char* p)
     {
+        char normalizedPath[128];
+        int i;
+
+        strcpy(normalizedPath, p);
+        if(!normalizeFolderPath(normalizedPath, 128))
+        {
+            cout << "\nPath is empty or too long to save." << endl;
+            return;
+        }
+
+        for(i=0;i<count;i++)
+        {
+            if(samePathIgnoreCase(paths[i], normalizedPath))
+            {
+                strcpy(p, paths[i]);
+                cout << "\nPath is already saved." << endl;
+                return;
+            }
+        }
+
         if(count < 10)
         {
-            strcpy(paths[count], p);
+            strcpy(paths[count], normalizedPath);
+            strcpy(p, normalizedPath);
             count++;
-            save();
-            cout << "\nPath saved for future use!" << endl;
+            if(save())
+                cout << "\nPath saved for future use!" << endl;
+            else
+                cout << "\nPath can be used now, but was not saved for later." << endl;
         }
         else
         {
@@ -1061,8 +1108,11 @@ public:
         for(i = selection - 1; i < count - 1; i++)
             strcpy(paths[i], paths[i + 1]);
         count--;
-        save();
-        cout << "\nSaved path removed. The actual folder was not deleted." << endl;
+        if(save())
+            cout << "\nSaved path removed. The actual folder was not deleted." << endl;
+        else
+            cout << "\nPath removed for this session, but PATHS.DAT could not be updated."
+                 << endl;
     }
 
     // selectPath - shows saved paths, user picks one or adds new
@@ -1085,6 +1135,11 @@ void selectPath(char* result)
     if(ch >= 1 && ch <= count)
     {
         strcpy(result, paths[ch - 1]);
+        if(!normalizeFolderPath(result, 128))
+        {
+            cout << "\nSaved folder path is invalid." << endl;
+            strcpy(result, ".\\");
+        }
     }
     else if(ch == count + 1)
     {
@@ -1112,23 +1167,31 @@ void selectPath(char* result)
         cin >> subPath;
 
         strcpy(result, paths[parentChoice - 1]);
+        if(!normalizeFolderPath(result, 128))
+        {
+            cout << "\nSaved folder path is invalid." << endl;
+            strcpy(result, ".\\");
+            return;
+        }
         baseLength = strlen(result);
+        if(baseLength > 0 && result[baseLength - 1] == '\\')
+            result[--baseLength] = '\0';
         childLength = strlen(subPath);
-        if(baseLength + childLength +
-           (baseLength > 0 && result[baseLength - 1] == '\\' ? 2 : 3) > 128)
+        if(baseLength + childLength + 3 > 128)
         {
             cout << "\nCombined path is too long." << endl;
             strcpy(result, paths[parentChoice - 1]);
             return;
         }
 
-        if(baseLength > 0 && result[baseLength - 1] != '\\')
-            strcat(result, "\\");
+        strcat(result, "\\");
         strcat(result, subPath);
-
-        baseLength = strlen(result);
-        if(baseLength == 0 || result[baseLength - 1] != '\\')
-            strcat(result, "\\");
+        if(!normalizeFolderPath(result, 128))
+        {
+            cout << "\nCombined path is too long." << endl;
+            strcpy(result, paths[parentChoice - 1]);
+            return;
+        }
 
         addPath(result);
     }
@@ -1137,19 +1200,11 @@ void selectPath(char* result)
         cout << "\nEnter complete folder path: ";
         cin >> result;
 
-        int len = strlen(result);
-
-        // Ensure the path ends with a backslash
-        if(len > 0 && result[len - 1] != '\\')
+        if(!normalizeFolderPath(result, 128))
         {
-            if(len + 1 >= 128)
-            {
-                cout << "\nPath is too long." << endl;
-                strcpy(result, ".\\");
-                return;
-            }
-            result[len] = '\\';
-            result[len + 1] = '\0';
+            cout << "\nPath is empty or too long." << endl;
+            strcpy(result, ".\\");
+            return;
         }
 
         addPath(result);
@@ -1173,7 +1228,6 @@ TaskResult SmartSortTask::execute()
     double seconds;
     int destinationCount;
     int i;
-    int destinationLength;
     int sourceIsDestination=0;
     int copyFailed=0;
     FILE *input;
@@ -1184,10 +1238,7 @@ TaskResult SmartSortTask::execute()
     if(engine == NULL)
         return FAILURE;
 
-    strcpy(fullPath, file.sourcePath);
-    strcat(fullPath, file.name);
-    strcat(fullPath, ".");
-    strcat(fullPath, file.extension);
+    buildFilePath(fullPath, file.sourcePath, file.name, file.extension);
 
     if(stat(fullPath, &fileStat) != 0)
     {
@@ -1214,14 +1265,8 @@ TaskResult SmartSortTask::execute()
     // then remove the source only after all destination copies succeed.
     for(i=0;i<destinationCount;i++)
     {
-        strcpy(destinationFiles[i], destinations[i]);
-        destinationLength = strlen(destinationFiles[i]);
-        if(destinationLength > 0 && destinationFiles[i][destinationLength - 1] != '\\' &&
-           destinationFiles[i][destinationLength - 1] != '/')
-            strcat(destinationFiles[i], "\\");
-        strcat(destinationFiles[i], file.name);
-        strcat(destinationFiles[i], ".");
-        strcat(destinationFiles[i], file.extension);
+        buildFilePath(destinationFiles[i], destinations[i],
+                      file.name, file.extension);
 
         if(samePathIgnoreCase(fullPath, destinationFiles[i]))
         {
